@@ -57,6 +57,8 @@ export default defineConfig({
         'resources/css/app.css',
         'resources/assets/css/demo.css',
         'resources/js/app.js',
+        'resources/js/HS/standard-datatable.js',
+        'resources/js/HS/data-table.js',
         ...pageJsFiles,
         ...vendorJsFiles,
         ...LibsJsFiles,

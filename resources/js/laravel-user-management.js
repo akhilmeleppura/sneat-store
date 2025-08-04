@@ -574,6 +574,15 @@ document.addEventListener('DOMContentLoaded', function (e) {
             document.getElementById('user_id').value = data.id;
             document.getElementById('add-user-fullname').value = data.name;
             document.getElementById('add-user-email').value = data.email;
+              document.getElementById('role').value = data.role_id;
+                $('#role').trigger('change');
+
+  // Set is_super_admin if visible
+  const superAdminField = document.getElementById('is_super_admin');
+  if (superAdminField) {
+    superAdminField.value = data.is_super_admin ? '1' : '0';
+    $('#is_super_admin').trigger('change');
+  }
           });
       }
     });

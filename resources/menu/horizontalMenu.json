@@ -208,7 +208,7 @@
               "submenu": [
                 {
                   "url": "app/ecommerce/settings/details",
-                  "name": "Store Details",
+                  "name": "Details",
                   "slug": "app-ecommerce-settings-details"
                 },
                 {
@@ -1108,6 +1108,23 @@
           "name": "Leaflet Maps",
           "icon": "menu-icon icon-base bx bx-map-alt",
           "slug": "maps-leaflet"
+        }
+      ]
+    },
+    {
+      "name": "Accounting",
+      "icon": "menu-icon icon-base bx bx-book",
+      "slug": "accounts",
+      "submenu": [
+        {
+          "name": "Chart of Accounts",
+          "slug": "accounts.chart",
+          "url": "accounts/chart-of-accounts"
+        },
+        {
+          "name": "Prefix",
+          "slug": "accounts.prefix",
+          "url": "accounts/prefix"
         }
       ]
     },

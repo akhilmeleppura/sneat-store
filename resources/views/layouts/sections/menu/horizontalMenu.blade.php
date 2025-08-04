@@ -47,7 +47,17 @@ $configData = Helper::appClasses();
 
         {{-- submenu --}}
         @isset($menu->submenu)
-        @include('layouts.sections.menu.submenu', ['menu' => $menu->submenu])
+          @if($menu->slug === 'accounting')
+            <ul class="menu-sub">
+              @foreach ($menu->submenu as $submenu)
+                @if(in_array($submenu->slug, ['accounts.chart', 'accounts.prefix']))
+                  @include('layouts.sections.menu.submenu-item', ['submenu' => $submenu])
+                @endif
+              @endforeach
+            </ul>
+          @else
+            @include('layouts.sections.menu.submenu', ['menu' => $menu->submenu])
+          @endif
         @endisset
       </li>
       @endforeach

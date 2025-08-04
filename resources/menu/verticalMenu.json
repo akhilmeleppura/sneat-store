@@ -139,6 +139,7 @@
         }
       ]
     },
+   
     {
       "menuHeader": "Apps & Pages"
     },
@@ -1077,6 +1078,27 @@
       "name": "Leaflet Maps",
       "slug": "maps-leaflet"
     },
+    
+    {
+      "menuHeader": "Permissions"
+    },
+    {
+      "name": "Roles & Permissions",
+      "icon": "menu-icon icon-base bx bx-check-shield",
+      "slug": "app-access",
+      "submenu": [
+        {
+          "url": "/roles",
+          "name": "Roles",
+          "slug": "app-access-roles"
+        },
+        {
+          "url": "/permissions",
+          "name": "Permission",
+          "slug": "app-access-permission"
+        }
+      ]
+    },
     {
       "menuHeader": "Misc"
     },
@@ -1110,6 +1132,26 @@
       "name": "Documentation",
       "slug": "documentation",
       "target": "_blank"
+    },
+    {
+      "menuHeader": "Journal"
+    },
+    {
+      "name": "Journal",
+      "icon": "bx bx-notepad",
+      "slug": "charts",
+      "submenu": [
+        {
+          "url": "accounting/journal",
+          "name": "Journal",
+          "slug": "charts-apex"
+        },
+        {
+          "url": "accounting/ledger",
+          "name": "Ledger",
+          "slug": "charts-apex"
+        }
+      ]
     }
   ]
 }

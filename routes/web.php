@@ -159,6 +159,7 @@ use App\Http\Controllers\tables\DatatableExtensions;
 use App\Http\Controllers\charts\ApexCharts;
 use App\Http\Controllers\charts\ChartJs;
 use App\Http\Controllers\maps\Leaflet;
+use Modules\Accounting\Http\Controllers\AccountingController;
 
 // Main Page Route
 Route::group(['middleware' => 'auth:sanctum', 'verified'], function () {
@@ -383,3 +384,9 @@ Route::middleware([
 ])->group(function () {
   Route::get('/dashboard', [Analytics::class, 'index'])->name('dashboard');
 });
+
+ Route::get('/accounting', [AccountingController::class, 'index'])->name('index');
+
+
+
+

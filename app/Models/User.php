@@ -9,10 +9,14 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
+
 
 class User extends Authenticatable
 {
+    use HasRoles;
     use HasApiTokens;
+    protected $guard_name = 'web'; 
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
@@ -29,6 +33,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role_id',
+    'is_super_admin',
+    'is_supre_admin',
     ];
 
     /**
