@@ -16,7 +16,7 @@ class AccountMainCategorySeeder extends Seeder
 {
     $timestamp = Carbon::now();
 
-    DB::table('account_main_categories')->insert([
+    DB::table('accounting_main_categories')->insert([
         [
             'name' => 'Asset',
             'type' => 'Debit',
