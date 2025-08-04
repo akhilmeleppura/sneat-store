@@ -14,10 +14,29 @@
     @vite(['resources/assets/vendor/libs/moment/moment.js', 'resources/assets/vendor/libs/flatpickr/flatpickr.js'])
 @endsection
 
+@push('styles')
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .printable-section, .printable-section * {
+        visibility: visible;
+    }
+    .printable-section {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+}
+</style>
+@endpush
+
 @section('content')
 <div class="row invoice-preview">
     <!-- Journal Details -->
-    <div class="col-xl-9 col-md-8 col-12 mb-md-0 mb-6">
+    <div class="col-xl-9 col-md-8 col-12 mb-md-0 mb-6 printable-section">
         <div class="card invoice-preview-card p-sm-12 p-6">
             <!-- Header -->
             <div class="card-body invoice-preview-header rounded">
