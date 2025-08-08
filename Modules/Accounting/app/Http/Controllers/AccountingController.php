@@ -7,6 +7,14 @@ use Illuminate\Http\Request;
 use Modules\Accounting\App\Models\MainCategory;
 use Modules\Accounting\App\Models\SubCategory;
 use Modules\Accounting\App\Models\ChartOfAccount;
+use Modules\Accounting\App\Models\OpeningBalance;
+use Modules\Accounting\App\Models\OpeningBalanceEquity;
+use Modules\Accounting\App\Models\JournalIndex;
+use Modules\Accounting\App\Models\JournalEntries;
+use Illuminate\Support\Facades\DB; 
+
+
+use Modules\Accounting\Events\EntryCreated;
 
 class AccountingController extends Controller
 {
@@ -61,25 +69,162 @@ class AccountingController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'main_category_id' => 'required|exists:accounting_main_categories,id',
-            'subcategory_id' => 'required|exists:accounting_subcategories,id',
-            'account_name' => 'required|string|max:255',
-            'opening_balance' => 'required|numeric'
-        ]);
+    // public function store(Request $request)
+    // {
+    //     $validated = $request->validate([
+    //         'main_category_id' => 'required|exists:accounting_main_categories,id',
+    //         'subcategory_id' => 'required|exists:accounting_subcategories,id',
+    //         'account_name' => 'required|string|max:255',
+    //         'opening_balance' => 'required|numeric'
+    //     ]);
 
-        ChartOfAccount::create([
+    //     ChartOfAccount::create([
+    //         'main_category_id' => $validated['main_category_id'],
+    //         'subcategory_id' => $validated['subcategory_id'],
+    //         'account_name' => $validated['account_name'],
+    //         'opening_balance' => $validated['opening_balance'],
+    //         'status' => true
+    //     ]);
+
+    //     return redirect()->route('accounting.index')->with('success', 'Account created successfully.');
+    // }
+
+//     public function store(Request $request)
+// {
+//     $validated = $request->validate([
+//         'main_category_id' => 'required|exists:accounting_main_categories,id',
+//         'subcategory_id' => 'required|exists:accounting_subcategories,id',
+//         'account_name' => 'required|string|max:255',
+//         'opening_balance' => 'required|numeric'
+//     ]);
+
+//     // 1. Create the Chart of Account
+//     $chartOfAccount = ChartOfAccount::create([
+//         'main_category_id' => $validated['main_category_id'],
+//         'subcategory_id' => $validated['subcategory_id'],
+//         'account_name' => $validated['account_name'],
+//         'opening_balance' => $validated['opening_balance'],
+//         'status' => true
+//     ]);
+
+//     // 2. Insert into OpeningBalance table
+//     OpeningBalance::create([
+//         'journal_id' => 1, // Assign a Journal ID if required
+//         'debit_amount' => $validated['opening_balance'] >= 0 ? $validated['opening_balance'] : 0,
+//         'credit_amount' => $validated['opening_balance'] < 0 ? abs($validated['opening_balance']) : 0,
+//         'chart_of_account_id' => $chartOfAccount->id,
+//         'description' => 'Opening Balance'
+//     ]);
+
+//     return redirect()->route('accounting.index')->with('success', 'Account created with Opening Balance entry.');
+// }
+public function store(Request $request)
+{
+    $validated = $request->validate([
+        'main_category_id' => 'required|exists:accounting_main_categories,id',
+        'subcategory_id' => 'required|exists:accounting_subcategories,id',
+        'account_name' => 'required|string|max:255',
+        'opening_balance' => 'required|numeric'
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+        $mainCategory = MainCategory::find($validated['main_category_id']);
+
+        if (!$mainCategory) {
+            return back()->withErrors(['main_category_id' => 'Invalid main category']);
+        }
+
+        $isDebitType = strtolower($mainCategory->type) === 'debit';
+        $debitAmount = $isDebitType ? abs($validated['opening_balance']) : 0;
+        $creditAmount = !$isDebitType ? abs($validated['opening_balance']) : 0;
+
+        // 1. Create Chart of Account
+        $chartOfAccount = ChartOfAccount::create([
             'main_category_id' => $validated['main_category_id'],
             'subcategory_id' => $validated['subcategory_id'],
             'account_name' => $validated['account_name'],
-            'opening_balance' => $validated['opening_balance'],
+            'cumulative_debit' => $debitAmount,
+            'cumulative_credit' => $creditAmount,
             'status' => true
         ]);
 
-        return redirect()->route('accounting.index')->with('success', 'Account created successfully.');
+        // 2. Create Journal Index
+        $journalIndex = JournalIndex::create([
+            'transaction_date' => now(),
+            'journal_number' => 'JN-' . str_pad(JournalIndex::count() + 1, 5, '0', STR_PAD_LEFT),
+            'created_by' => auth()->id(),
+            'number_of_entries' => 2,
+            'transaction_amount' => $debitAmount + $creditAmount,
+            'summary' => 'Opening Balance Entry for ' . $validated['account_name']
+        ]);
+
+        // 3. Journal Entry
+        JournalEntries::create([
+            'journal_id' => $journalIndex->id,
+            'debit_amount' => $debitAmount,
+            'credit_amount' => $creditAmount,
+            'chart_of_account_id' => $chartOfAccount->id,
+            'description' => 'Opening Balance'
+        ]);
+
+        // 4. Opening Balance
+        OpeningBalance::create([
+            'journal_id' => $journalIndex->id,
+            'debit_amount' => $debitAmount,
+            'credit_amount' => $creditAmount,
+            'chart_of_account_id' => $chartOfAccount->id,
+            'description' => 'Opening Balance'
+        ]);
+
+        // 5. Get 'Opening Balance Equity' Chart of Account
+        // 5. Get or Create 'Opening Balance Equity' Chart of Account
+$reverseChartOfAccount = ChartOfAccount::where('account_name', 'Opening Balance Equity')->first();
+
+if (!$reverseChartOfAccount) {
+    $reverseChartOfAccount = ChartOfAccount::create([
+        'main_category_id' => $validated['main_category_id'], // Or assign a fixed equity category ID
+        'subcategory_id' => $validated['subcategory_id'],     // Or assign default equity subcategory ID
+        'account_name' => 'Opening Balance Equity',
+        'cumulative_debit' => 0,
+        'cumulative_credit' => 0,
+        'status' => true
+    ]);
+}
+
+
+        // 6. Reverse Entry in Opening Balance
+        OpeningBalance::create([
+            'journal_id' => $journalIndex->id,
+            'debit_amount' => $creditAmount,
+            'credit_amount' => $debitAmount,
+            'chart_of_account_id' => $reverseChartOfAccount->id,
+            'description' => 'Offset for ' . $validated['account_name']
+        ]);
+
+        JournalEntries::create([
+            'journal_id' => $journalIndex->id,
+            'debit_amount' => $creditAmount,
+            'credit_amount' => $debitAmount,
+            'chart_of_account_id' => $reverseChartOfAccount->id,
+            'description' => 'Offset Entry for Opening Balance'
+        ]);
+
+        DB::commit();
+
+        return redirect()->route('accounting.index')->with('success', 'Account and journal entries stored successfully.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        report($e);
+        return back()->with('error', 'Failed to store account and journal: ' . $e->getMessage());
     }
+}
+
+
+
+
 
     /**
      * Display the specified resource.

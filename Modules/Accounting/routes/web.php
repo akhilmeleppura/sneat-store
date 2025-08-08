@@ -6,6 +6,8 @@ use Modules\Accounting\App\Http\Controllers\SubCategoryController;
 use Modules\Accounting\App\Http\Controllers\PrefixController;
 use Modules\Accounting\App\Http\Controllers\Journal\JournalEntriesController;
 use Modules\Accounting\App\Http\Controllers\Ledger\LedgerController;
+use Modules\Accounting\Http\Controllers\TrialBalance\TrialBalanceController;
+
 
 
 
@@ -53,3 +55,8 @@ Route::get('/charts-of-account', [AccountingController::class, 'index'])->name('
     Route::get('accounting/ledger/entries-list', [LedgerController::class, 'entriesList'])->name('accounting.ledger.entriesList');
 // Route::get('/accounting/ledger/{id}/view', [LedgerController::class, 'showLedgerDetails'])->name('accounting.ledger.view');
 Route::get('/accounting/ledger/{id}/view', [LedgerController::class, 'details'])->name('accounting.ledger.view');
+   Route::get('/accounting/trial-balance', [TrialBalanceController::class, 'index'])->name('accounting.trial-balance.index');
+Route::get('/accounting/trial-balance/export-pdf', [TrialBalanceController::class, 'exportPdf'])->name('accounting.trial-balance.export-pdf');
+
+Route::get('accounting/journal/create', [JournalEntriesController::class, 'create'])->name('accounting.journal.create');
+Route::post('/journal', [JournalEntriesController::class, 'store'])->name('accoutnig.journal.store');

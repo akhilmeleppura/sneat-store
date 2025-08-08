@@ -1,18 +1,18 @@
 <?php
 
-namespace Modules\SampleModule\Http\Controllers;
+namespace $CLASS_NAMESPACE$;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-class SampleModuleController extends Controller
+class $CLASS$ extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return view('samplemodule::index');
+        return view('$LOWER_NAME$::index');
     }
 
     /**
@@ -20,7 +20,7 @@ class SampleModuleController extends Controller
      */
     public function create()
     {
-        return view('samplemodule::create');
+        return view('$LOWER_NAME$::create');
     }
 
     /**
@@ -33,7 +33,7 @@ class SampleModuleController extends Controller
      */
     public function show($id)
     {
-        return view('samplemodule::show');
+        return view('$LOWER_NAME$::show');
     }
 
     /**
@@ -41,7 +41,7 @@ class SampleModuleController extends Controller
      */
     public function edit($id)
     {
-        return view('samplemodule::edit');
+        return view('$LOWER_NAME$::edit');
     }
 
     /**

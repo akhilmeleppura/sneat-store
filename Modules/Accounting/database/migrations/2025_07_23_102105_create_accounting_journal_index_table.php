@@ -28,6 +28,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('accounting_journal_indexes');
+    Schema::dropIfExists('accounting_journal_entries');
+    Schema::dropIfExists('accounting_opening_balance_equities');
+    Schema::dropIfExists('accounting_ledger');
+    Schema::dropIfExists('accounting_journal_indexes');
     }
 };

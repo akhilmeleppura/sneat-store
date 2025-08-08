@@ -1132,26 +1132,7 @@
       "name": "Documentation",
       "slug": "documentation",
       "target": "_blank"
-    },
-    {
-      "menuHeader": "Journal"
-    },
-    {
-      "name": "Journal",
-      "icon": "bx bx-notepad",
-      "slug": "charts",
-      "submenu": [
-        {
-          "url": "accounting/journal",
-          "name": "Journal",
-          "slug": "charts-apex"
-        },
-        {
-          "url": "accounting/ledger",
-          "name": "Ledger",
-          "slug": "charts-apex"
-        }
-      ]
     }
+    
   ]
 }

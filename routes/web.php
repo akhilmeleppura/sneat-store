@@ -160,6 +160,8 @@ use App\Http\Controllers\charts\ApexCharts;
 use App\Http\Controllers\charts\ChartJs;
 use App\Http\Controllers\maps\Leaflet;
 use Modules\Accounting\Http\Controllers\AccountingController;
+use App\Http\Controllers\module_menu\ModuleMenuController;
+
 
 // Main Page Route
 Route::group(['middleware' => 'auth:sanctum', 'verified'], function () {
@@ -387,6 +389,7 @@ Route::middleware([
 
  Route::get('/accounting', [AccountingController::class, 'index'])->name('index');
 
+Route::get('/module-menus', [ModuleMenuController::class, 'index'])->name('module.menus');
 
 
 

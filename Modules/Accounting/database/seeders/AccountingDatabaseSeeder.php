@@ -12,5 +12,7 @@ class AccountingDatabaseSeeder extends Seeder
     public function run(): void
     {
     $this->call(AccountMainCategorySeeder::class);
+    // $this->call(OpeningBalanceEquitySeeder::class);
+
     }
 }

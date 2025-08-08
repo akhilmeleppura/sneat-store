@@ -16,20 +16,18 @@ class ChartOfAccount extends Model
 
     protected $fillable = [
         'account_name',
-        'opening_balance',
+        'identifier',
         'subcategory_id',
-        'main_category_id'
+        'main_category_id',
+        'cumulative_debit',
+        'cumulative_credit'
     ];
 
-//     public function subcategory()
-// {
-//     return $this->belongsTo(SubCategory::class, 'subcategory_id', 'id');
-// }
 
-// public function mainCategory()
-// {
-//     return $this->belongsTo(MainCategory::class, 'main_category_id', 'id');
-// }
+    public function openingBalance()
+{
+    return $this->hasOne(OpeningBalance::class, 'chart_of_account_id');
+}
 
   public function subcategory()
     {

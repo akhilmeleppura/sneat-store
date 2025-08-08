@@ -11,6 +11,7 @@ use Modules\Accounting\App\Models\JournalIndex;
 use Modules\Accounting\App\Models\ChartOfAccount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class JournalEntriesController extends Controller
 {
@@ -30,18 +31,17 @@ class JournalEntriesController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function create()
+     public function create()
     {
-        $chartOfAccounts = ChartOfAccount::all();
-        return view('accounting::journal.create', compact('chartOfAccounts'));
+        return view('accounting::journal.form', [
+                    'chartOfAccounts' => ChartOfAccount::all(),
+
+            'journalEntry' => null, // No entry yet
+            'isEdit' => false,
+            'today' => Carbon::now()->toDateString(), // 👈 Used for default transaction date
+        ]);
     }
 
-    /**
-     * Store a newly created journal entry in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -95,27 +95,8 @@ class JournalEntriesController extends Controller
         }
     }
 
-    /**
-     * Show the form for editing the specified journal entry.
-     *
-     * @param int $journalId
-     * @return \Illuminate\View\View
-     */
-    public function edit($journalId)
-    {
-        $journal = JournalIndex::with('entries')->findOrFail($journalId);
-        $chartOfAccounts = ChartOfAccount::all();
-        return view('accounting::journal.edit', compact('journal', 'chartOfAccounts'));
-    }
-
-    /**
-     * Update the specified journal entry in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param int $journalId
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function update(Request $request, $journalId)
+   
+  public function update(Request $request, $journalId)
     {
         $request->validate([
             'transaction_date' => 'required|date',
@@ -150,6 +131,21 @@ class JournalEntriesController extends Controller
         return redirect()->route('accounting.journal.index')->with('success', 'Journal Entry updated successfully.');
     }
 
+   
+    
+    public function edit($id)
+    {
+        $journalEntry = JournalIndex::with('entries')->findOrFail($id);
+        $chartOfAccounts = ChartOfAccount::all();
+        return view('accounting::journal.form', [
+            'chartOfAccounts'=>$chartOfAccounts,
+            'journalEntry' => $journalEntry,
+            'isEdit' => true,
+            'today' => null, // 👈 Don't auto-fill date in edit
+        ]);
+    }
+
+   
     /**
      * Display the specified journal entry.
      *

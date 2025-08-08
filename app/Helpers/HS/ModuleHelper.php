@@ -2,35 +2,32 @@
 
 namespace App\Helpers\HS;
 
+use Illuminate\Support\Str;
+
 class ModuleHelper
 {
     public static function getSettingsModules()
-    {
-        $modules = [];
-        $modulesPath = base_path('Modules');
+{
+    $modules = [];
+    $modulesPath = base_path('Modules');
 
-        foreach (scandir($modulesPath) as $moduleName) {
-            if ($moduleName === '.' || $moduleName === '..') continue;
+    foreach (scandir($modulesPath) as $moduleFolder) {
+        if ($moduleFolder === '.' || $moduleFolder === '..') continue;
 
-            $jsonPath = $modulesPath . '/' . $moduleName . '/module.json';
+        $jsonPath = $modulesPath . '/' . $moduleFolder . '/module.json';
+        if (!file_exists($jsonPath)) continue;
 
-            if (file_exists($jsonPath)) {
-                $json = json_decode(file_get_contents($jsonPath));
+        $json = json_decode(file_get_contents($jsonPath));
+        if (!isset($json->enabled) || !$json->enabled) continue;
 
-                $slug = $json->slug ?? $json->alias ?? $moduleName;
-
-if (isset($json->enabled) && $json->enabled) {
-    $modules[] = (object)[
-        'name' => $json->name ?? $moduleName,
-        'url'  => url($slug),
-        'slug' => $slug
-    ];
-
-
-                }
-            }
-        }
-
-        return $modules;
+        $modules[] = (object)[
+            'name' => $json->name ?? $moduleFolder,
+            'url'  => url($json->slug ?? Str::slug($moduleFolder)),
+            'slug' => $moduleFolder, // Store folder name, exact case
+        ];
     }
+
+    return $modules;
+}
+
 }
