@@ -1,106 +1,257 @@
-@extends('layouts.layoutMaster')
+@extends('accounting::components.layouts.master')
 
 @section('title', 'Trial Balance Report')
 
-{{-- Vendor Styles --}}
-@section('vendor-style')
-@vite([
-    'resources/assets/vendor/libs/datatables-bs5/datatables.bootstrap5.scss',
-    'resources/assets/vendor/libs/select2/select2.scss',
-    'resources/assets/vendor/libs/flatpickr/flatpickr.scss'
-])
-@endsection
-
-{{-- Vendor Scripts --}}
-@section('vendor-script')
-@vite([
-    'resources/assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js',
-    'resources/assets/vendor/libs/select2/select2.js',
-    'resources/assets/vendor/libs/flatpickr/flatpickr.js'
-])
-@endsection
-
 @section('page-style')
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
-    /* Header and footer text to white */
-    .table thead th,
-    .table tfoot td {
-        color: #ffffff !important;
-        background-color: #002F6C !important;
-        border: 1px solid #000 !important;
+    /* Modern Styling */
+    body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #f0f2f5;
+        color: #333;
+    }
+
+    .app-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 25px 30px;
+    }
+
+    /* Filter Bar - New Style */
+    .filter-container {
+        background: white;
+        border-radius: 8px;
+        padding: 10px 20px;
+        margin-bottom: 20px;
+        border: 1px solid #eee;
+        display: flex;
+        align-items: center;
+    }
+
+    .filter-container .input-group {
+        display: flex;
+        align-items: center;
+        flex-grow: 1;
+    }
+
+    .filter-container .input-group-text {
+        background: transparent;
+        border: none;
+        padding: 0;
+        font-weight: 500;
+        color: #555;
+        margin-right: 8px;
+    }
+
+    .filter-container .form-control {
+        border: 1px solid #ddd;
+        padding: 8px 12px;
+        border-radius: 4px;
+        flex-grow: 1;
+    }
+
+    .filter-container .btn {
+        padding: 8px 15px;
+        border-radius: 4px;
+        margin-left: 10px;
+    }
+
+    .filter-container .btn-success {
+        background: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+
+    .filter-container .btn-outline-secondary {
+        border: 1px solid #ddd;
+        color: #555;
+    }
+
+    /* Title Section */
+    .title-section {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 25px;
+    }
+
+    .title-section h4 {
+        font-size: 26px;
+        font-weight: 700;
+        color: #333;
+        text-transform: uppercase;
+        margin: 0;
+    }
+
+    .export-btn {
+        background: #007bff;
+        color: white;
+        padding: 10px 18px;
+        border-radius: 5px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Info Bar */
+    .info-bar {
+        background: #f7f9fc;
+        padding: 20px;
+        border-radius: 6px;
+        margin-bottom: 25px;
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .info-item {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .info-item strong {
+        color: #6c757d;
+        font-weight: normal;
+        font-size: 12px;
+        display: block;
+    }
+
+    /* Table Styling */
+    .data-card {
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .table-responsive {
+        border-radius: 8px;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table thead {
+        background: #21355c;
+        color: white;
+    }
+
+    .table thead th {
+        padding: 14px 15px;
+        font-weight: 500;
+        text-align: left;
+        color: white !important;
     }
 
     .table tbody td {
-        border: 1px solid #000 !important;
+        padding: 12px 15px;
+        border-bottom: 1px solid #e0e0e0;
     }
 
-    .table tfoot td {
+    .table tbody tr:nth-child(even) {
+        background: #fbfdff;
+    }
+
+    .account-link {
+        color: #002F6C;
+        text-decoration: underline;
+    }
+
+    .numeric-cell {
+        text-align: right;
+    }
+
+    .table tfoot {
+        background: #21355c;
+        color: white;
         font-weight: bold;
     }
 
-    .table th,
-    .table td {
-        vertical-align: middle !important;
-        text-align: center;
+    .table tfoot td {
+        padding: 14px 15px;
+        color: white !important;
+    }
+
+    /* PDF Specific Styles */
+    @media print {
+        body {
+            background: white;
+            color: black;
+        }
+        .table thead th,
+        .table tfoot td {
+            color: white !important;
+            background-color: #21355c !important;
+        }
+        .account-link {
+            color: #002F6C !important;
+        }
     }
 </style>
 @endsection
 
-
 @section('content')
-<div class="container-xxl flex-grow-1 container-p-y">
-    <!-- Date Picker and Export Button -->
+<div class="app-container">
+    <!-- Filter Section -->
     <form method="GET" action="{{ route('accounting.trial-balance.index') }}">
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <div class="input-group w-auto">
+        <div class="filter-container">
+            <div class="input-group">
                 <span class="input-group-text">Duration</span>
-                <input type="text" name="date_range" class="form-control flatpickr-range" value="{{ request('date_range') }}" placeholder="Start Date to End Date" />
+                <input type="text" name="date_range" class="form-control flatpickr-range" 
+                       value="{{ request('date_range') }}" placeholder="Start Date to End Date">
                 <button type="submit" class="btn btn-success">OK</button>
                 <a href="{{ route('accounting.trial-balance.index') }}" class="btn btn-outline-secondary">Clear</a>
             </div>
-            <div>
-                <button type="submit" formaction="{{ route('accounting.trial-balance.export-pdf') }}" class="btn btn-primary">
-    Export as PDF
-</button>
-
-            </div>
+            <button type="submit" formaction="{{ route('accounting.trial-balance.export-pdf') }}" 
+                    class="export-btn">
+                Export as PDF
+            </button>
         </div>
     </form>
 
-    <!-- Report Header Section -->
-    <div class="bg-light p-3 rounded mb-4">
-        <h4 class="fw-bold mb-3">TRIAL BALANCE</h4>
-        <div class="row g-3">
-            <div class="col-md-4">
-                <div><strong>Data Period:</strong> {{ request('date_range') ?? 'All Time' }}</div>
-            </div>
-            <div class="col-md-4">
-                <div><strong>Generated By:</strong> Admin</div>
-            </div>
-            <div class="col-md-4">
-                <div><strong>Generated On:</strong> {{ now()->format('D d, Y') }}</div>
-            </div>
+    <!-- Title Section -->
+    <div class="title-section">
+        <h4>TRIAL BALANCE</h4>
+    </div>
+
+    <!-- Info Bar -->
+    <div class="info-bar">
+        <div class="info-item">
+            <strong>Data Period:</strong>
+            <span>{{ request('date_range') ?? 'All Time' }}</span>
+        </div>
+        <div class="info-item">
+            <strong>Generated By:</strong>
+            <span>Admin</span>
+        </div>
+        <div class="info-item">
+            <strong>Generated On:</strong>
+            <span>{{ now()->format('D d, Y') }}</span>
         </div>
     </div>
 
-    <!-- Trial Balance Table -->
-    <div class="card">
+    <!-- Data Table -->
+    <div class="data-card">
         <div class="table-responsive">
-            <table class="table mb-0 table-bordered">
-                <thead style="background-color: #002F6C; color: #ffffff;">
+            <table class="table">
+                <thead>
                     <tr>
-                        <th rowspan="2">Account</th>
-                        <th colspan="2">Opening</th>
-                        <th colspan="2">Transaction</th>
-                        <th colspan="2">Closing</th>
+                        <th rowspan="2" style="color: white !important;">Account</th>
+                        <th colspan="2" style="color: white !important;">Opening</th>
+                        <th colspan="2" style="color: white !important;">Transaction</th>
+                        <th colspan="2" style="color: white !important;">Closing</th>
                     </tr>
                     <tr>
-                        <th>Debit (SAR)</th>
-                        <th>Credit (SAR)</th>
-                        <th>Debit (SAR)</th>
-                        <th>Credit (SAR)</th>
-                        <th>Debit (SAR)</th>
-                        <th>Credit (SAR)</th>
+                        <th style="color: white !important;">Debit (SAR)</th>
+                        <th style="color: white !important;">Credit (SAR)</th>
+                        <th style="color: white !important;">Debit (SAR)</th>
+                        <th style="color: white !important;">Credit (SAR)</th>
+                        <th style="color: white !important;">Debit (SAR)</th>
+                        <th style="color: white !important;">Credit (SAR)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -108,45 +259,56 @@
                         $totalOpeningDebit = $totalOpeningCredit = 0;
                         $totalTransactionDebit = $totalTransactionCredit = 0;
                         $totalClosingDebit = $totalClosingCredit = 0;
+
+                        $filteredData = $trialBalanceData->filter(function($row){
+                            return $row['transaction_debit'] > 0 || $row['transaction_credit'] > 0;
+                        });
                     @endphp
 
-                    @foreach($trialBalanceData as $row)
+                    @if($filteredData->count() > 0)
+                        @foreach($filteredData as $row)
+                            <tr>
+                                <td>
+                                    <a href="{{ route('accounting.ledger.view', ['id' => $row['account_id']]) }}{{ request('date_range') ? '?date_range=' . urlencode(request('date_range')) : '' }}" 
+                                       target="_blank" class="account-link">
+                                        {{ $row['account_name'] }}
+                                    </a>
+                                </td>
+                                <td class="numeric-cell">{{ number_format($row['opening_debit'], 2) }}</td>
+                                <td class="numeric-cell">{{ number_format($row['opening_credit'], 2) }}</td>
+                                <td class="numeric-cell">{{ number_format($row['transaction_debit'], 2) }}</td>
+                                <td class="numeric-cell">{{ number_format($row['transaction_credit'], 2) }}</td>
+                                <td class="numeric-cell">{{ number_format($row['closing_debit'], 2) }}</td>
+                                <td class="numeric-cell">{{ number_format($row['closing_credit'], 2) }}</td>
+                            </tr>
+                            @php
+                                $totalOpeningDebit += $row['opening_debit'];
+                                $totalOpeningCredit += $row['opening_credit'];
+                                $totalTransactionDebit += $row['transaction_debit'];
+                                $totalTransactionCredit += $row['transaction_credit'];
+                                $totalClosingDebit += $row['closing_debit'];
+                                $totalClosingCredit += $row['closing_credit'];
+                            @endphp
+                        @endforeach
+                    @else
                         <tr>
-                            <td>
-                                <a href="{{ route('accounting.ledger.view', ['id' => $row['account_id']]) }}{{ request('date_range') ? '?date_range=' . urlencode(request('date_range')) : '' }}" 
-                                   target="_blank" 
-                                   style="text-decoration: underline; color: #002F6C;">
-                                    {{ $row['account_name'] }}
-                                </a>
-                            </td>
-                            <td>{{ number_format($row['opening_debit'], 2) }}</td>
-                            <td>{{ number_format($row['opening_credit'], 2) }}</td>
-                            <td>{{ number_format($row['transaction_debit'], 2) }}</td>
-                            <td>{{ number_format($row['transaction_credit'], 2) }}</td>
-                            <td>{{ number_format($row['closing_debit'], 2) }}</td>
-                            <td>{{ number_format($row['closing_credit'], 2) }}</td>
+                            <td colspan="7" class="text-center">No data available for the selected date range.</td>
                         </tr>
-                        @php
-                            $totalOpeningDebit += $row['opening_debit'];
-                            $totalOpeningCredit += $row['opening_credit'];
-                            $totalTransactionDebit += $row['transaction_debit'];
-                            $totalTransactionCredit += $row['transaction_credit'];
-                            $totalClosingDebit += $row['closing_debit'];
-                            $totalClosingCredit += $row['closing_credit'];
-                        @endphp
-                    @endforeach
+                    @endif
                 </tbody>
-                <tfoot style="background-color: #002F6C; color: #ffffff; font-weight: bold;">
+                @if($filteredData->count() > 0)
+                <tfoot>
                     <tr>
-                        <td>Total</td>
-                        <td>{{ number_format($totalOpeningDebit, 2) }}</td>
-                        <td>{{ number_format($totalOpeningCredit, 2) }}</td>
-                        <td>{{ number_format($totalTransactionDebit, 2) }}</td>
-                        <td>{{ number_format($totalTransactionCredit, 2) }}</td>
-                        <td>{{ number_format($totalClosingDebit, 2) }}</td>
-                        <td>{{ number_format($totalClosingCredit, 2) }}</td>
+                        <td style="color: white !important;">Total</td>
+                        <td class="numeric-cell" style="color: white !important;">{{ number_format($totalOpeningDebit, 2) }}</td>
+                        <td class="numeric-cell" style="color: white !important;">{{ number_format($totalOpeningCredit, 2) }}</td>
+                        <td class="numeric-cell" style="color: white !important;">{{ number_format($totalTransactionDebit, 2) }}</td>
+                        <td class="numeric-cell" style="color: white !important;">{{ number_format($totalTransactionCredit, 2) }}</td>
+                        <td class="numeric-cell" style="color: white !important;">{{ number_format($totalClosingDebit, 2) }}</td>
+                        <td class="numeric-cell" style="color: white !important;">{{ number_format($totalClosingCredit, 2) }}</td>
                     </tr>
                 </tfoot>
+                @endif
             </table>
         </div>
     </div>
@@ -154,38 +316,22 @@
 @endsection
 
 @section('page-script')
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        flatpickr(".flatpickr-range", {
-            mode: "range",
-            dateFormat: "Y-m-d",
-            locale: {
-                rangeSeparator: " to "
-            },
-            onReady: function (selectedDates, dateStr, instance) {
-                const buttonWrapper = document.createElement('div');
-                buttonWrapper.classList.add('d-flex', 'justify-content-end', 'mt-2');
-
-                const okButton = document.createElement('button');
-                okButton.type = 'button';
-                okButton.className = 'btn btn-sm btn-primary me-1';
-                okButton.textContent = 'OK';
-                okButton.addEventListener('click', () => instance.close());
-
-                const clearButton = document.createElement('button');
-                clearButton.type = 'button';
-                clearButton.className = 'btn btn-sm btn-secondary';
-                clearButton.textContent = 'Clear';
-                clearButton.addEventListener('click', () => {
-                    instance.clear();
-                    instance.close();
-                });
-
-                buttonWrapper.appendChild(okButton);
-                buttonWrapper.appendChild(clearButton);
-                instance.calendarContainer.appendChild(buttonWrapper);
-            }
-        });
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize date range picker
+    flatpickr(".flatpickr-range", {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        locale: {
+            rangeSeparator: " to "
+        }
     });
+    
+    // Ensure PDF export maintains white text in headers/footers
+    document.querySelector('button[formaction*="export-pdf"]').addEventListener('click', function() {
+        // Add any necessary PDF export preparation here
+    });
+});
 </script>
 @endsection

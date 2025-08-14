@@ -5,6 +5,9 @@ namespace  Modules\Accounting\App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Accounting\App\Models\Prefix;
+use App\Helpers\HS\Reply;
+use Illuminate\Support\Facades\Validator;
+use Modules\Accounting\Services\MenuService;
 
 class PrefixController extends Controller
 {
@@ -15,26 +18,8 @@ class PrefixController extends Controller
      */
     public function index()
     {
-        $menu = [
-            [
-                'label' => 'Chart of Accounts',
-                'icon' => 'bx bx-store-alt',
-                'url' => url('/accounting/charts-of-account'),
-                'active' => false,
-            ],
-            [
-                'label' => 'Sub Category',
-                'icon' => 'bx bx-credit-card',
-                'url' => url('/accounting/subcategory'),
-                'active' => false,
-            ],
-            [
-                'label' => 'Prefix Journal',
-                'icon' => 'bx bx-credit-card',
-                'url' => 'javascript:void(0);',
-                'active' => true,
-            ]
-        ];
+              $currentRoute = request()->route()->getName();
+    $menu = MenuService::getMenu($currentRoute);
 
         return view('accounting::accounting.prefix', compact('menu'));
     }
@@ -57,14 +42,21 @@ class PrefixController extends Controller
      */
     public function store(Request $request)
     {
+        
+    try {
         $validated = $request->validate([
             'journal_name' => 'required|string|unique:accounting_prefixes,journal_name|max:255',
         ]);
 
         Prefix::create($validated);
 
-        return redirect()->route('accounting.prefix.index')->with('success', 'Prefix saved successfully!');
+        return Reply::success('Journal prefix added successfully.');
+
+    } catch (\Exception $e) {
+        report($e);
+        return Reply::error('Failed to add prefix. ' . $e->getMessage(), 500);
     }
+}
 
     /**
      * Display the specified resource.

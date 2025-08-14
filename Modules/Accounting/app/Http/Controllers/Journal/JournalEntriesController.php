@@ -12,6 +12,8 @@ use Modules\Accounting\App\Models\ChartOfAccount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Modules\Accounting\Events\EntryCreated;
+use Modules\Accounting\App\Helpers\SinglePointAccess\journalEntryAccess;
 
 class JournalEntriesController extends Controller
 {
@@ -42,59 +44,160 @@ class JournalEntriesController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'transaction_date' => 'required|date',
-            'summary' => 'nullable|string|max:255',
-            'entries' => 'required|array|min:2',
-            'entries.*.ledger_account_id' => 'required|exists:accounting_chartofaccounts,id',
-            'entries.*.debit_amount' => 'nullable|numeric',
-            'entries.*.credit_amount' => 'nullable|numeric',
-            'entries.*.description' => 'nullable|string',
-        ]);
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'transaction_date' => 'required|date',
+    //         'summary' => 'nullable|string|max:255',
+    //         'entries' => 'required|array|min:2',
+    //         'entries.*.ledger_account_id' => 'required|exists:accounting_chartofaccounts,id',
+    //         'entries.*.debit_amount' => 'nullable|numeric',
+    //         'entries.*.credit_amount' => 'nullable|numeric',
+    //         'entries.*.description' => 'nullable|string',
+    //     ]);
 
-        $totalDebit = collect($request->entries)->sum(function ($entry) {
-            return floatval($entry['debit_amount'] ?? 0);
-        });
+    //     $totalDebit = collect($request->entries)->sum(function ($entry) {
+    //         return floatval($entry['debit_amount'] ?? 0);
+    //     });
 
-        $totalCredit = collect($request->entries)->sum(function ($entry) {
-            return floatval($entry['credit_amount'] ?? 0);
-        });
+    //     $totalCredit = collect($request->entries)->sum(function ($entry) {
+    //         return floatval($entry['credit_amount'] ?? 0);
+    //     });
 
-        if ($totalDebit != $totalCredit) {
-            return back()->withErrors(['Total Debit and Credit amounts must be equal.'])->withInput();
-        }
+    //     if ($totalDebit != $totalCredit) {
+    //         return back()->withErrors(['Total Debit and Credit amounts must be equal.'])->withInput();
+    //     }
 
-        DB::beginTransaction();
+    //     DB::beginTransaction();
 
-        try {
-            $journal = new JournalIndex();
-            $journal->transaction_date = $request->transaction_date;
-            $journal->journal_number = 'JRN-' . strtoupper(Str::random(6));
-            $journal->created_by = auth()->id();
-            $journal->summary = $request->summary;
-            $journal->save();
+    //     try {
+    //         $journal = new JournalIndex();
+    //         $journal->transaction_date = $request->transaction_date;
+    //         $journal->journal_number = 'JRN-' . strtoupper(Str::random(6));
+    //         $journal->created_by = auth()->id();
+    //         $journal->summary = $request->summary;
+    //         $journal->save();
 
-            foreach ($request->entries as $entry) {
-                JournalEntries::create([
-                    'journal_id' => $journal->id,
-                    'chart_of_account_id' => $entry['ledger_account_id'],
-                    'debit_amount' => $entry['debit_amount'] ?? 0,
-                    'credit_amount' => $entry['credit_amount'] ?? 0,
-                    'description' => $entry['description'],
-                ]);
-            }
+    //         foreach ($request->entries as $entry) {
+    //             JournalEntries::create([
+    //                 'journal_id' => $journal->id,
+    //                 'chart_of_account_id' => $entry['ledger_account_id'],
+    //                 'debit_amount' => $entry['debit_amount'] ?? 0,
+    //                 'credit_amount' => $entry['credit_amount'] ?? 0,
+    //                 'description' => $entry['description'],
+    //             ]);
+    //         }
 
-            DB::commit();
+    //         DB::commit();
 
-            return redirect()->route('accounting.journal.index')->with('success', 'Journal Entry Created Successfully.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['An error occurred while saving.'])->withInput();
-        }
+    //         return redirect()->route('accounting.journal.index')->with('success', 'Journal Entry Created Successfully.');
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return back()->withErrors(['An error occurred while saving.'])->withInput();
+    //     }
+    // }
+
+    
+// public function store(Request $request)
+// {
+//     $request->validate([
+//         'transaction_date' => 'required|date',
+//         'summary' => 'nullable|string|max:255',
+//         'entries' => 'required|array|min:2',
+//         'entries.*.ledger_account_id' => 'required|exists:accounting_chartofaccounts,id',
+//         'entries.*.debit_amount' => 'nullable|numeric',
+//         'entries.*.credit_amount' => 'nullable|numeric',
+//         'entries.*.description' => 'nullable|string',
+//     ]);
+
+//     $totalDebit = collect($request->entries)->sum(fn($entry) => floatval($entry['debit_amount'] ?? 0));
+//     $totalCredit = collect($request->entries)->sum(fn($entry) => floatval($entry['credit_amount'] ?? 0));
+
+//     if ($totalDebit != $totalCredit) {
+//         return back()->withErrors(['Total Debit and Credit amounts must be equal.'])->withInput();
+//     }
+
+//     DB::beginTransaction();
+
+//     try {
+//         $journal = new JournalIndex();
+//         $journal->transaction_date = $request->transaction_date;
+//         $journal->journal_number = 'JRN-' . strtoupper(Str::random(6));
+//         $journal->created_by = auth()->id();
+//         $journal->summary = $request->summary;
+//         $journal->save();
+
+//         foreach ($request->entries as $entry) {
+//             $journalEntry = JournalEntries::create([
+//                 'journal_id' => $journal->id,
+//                 'chart_of_account_id' => $entry['ledger_account_id'],
+//                 'debit_amount' => $entry['debit_amount'] ?? 0,
+//                 'credit_amount' => $entry['credit_amount'] ?? 0,
+//                 'description' => $entry['description'],
+//             ]);
+
+//             // Trigger event to update cumulative balance
+//             EntryCreated::dispatch($journalEntry);
+//         }
+
+//         DB::commit();
+
+//         return redirect()
+//             ->route('accounting.journal.index')
+//             ->with('success', 'Journal Entry Created Successfully.');
+//     } catch (\Exception $e) {
+//         DB::rollBack();
+//         return back()->withErrors(['An error occurred while saving: ' . $e->getMessage()])->withInput();
+//     }
+// }
+
+
+
+public function store(Request $request)
+{
+    $request->validate([
+        'transaction_date' => 'required|date',
+        'summary' => 'nullable|string|max:255',
+        'entries' => 'required|array|min:2',
+        'entries.*.ledger_account_id' => 'required|exists:accounting_chartofaccounts,id',
+        'entries.*.debit_amount' => 'nullable|numeric',
+        'entries.*.credit_amount' => 'nullable|numeric',
+        'entries.*.description' => 'nullable|string',
+    ]);
+
+    $totalDebit = collect($request->entries)->sum(fn($entry) => floatval($entry['debit_amount'] ?? 0));
+    $totalCredit = collect($request->entries)->sum(fn($entry) => floatval($entry['credit_amount'] ?? 0));
+
+    if ($totalDebit != $totalCredit) {
+        return back()->withErrors(['Total Debit and Credit amounts must be equal.'])->withInput();
     }
 
+    DB::beginTransaction();
+
+    try {
+        $journal = new JournalIndex();
+        $journal->transaction_date = $request->transaction_date;
+        $journal->journal_number = 'JRN-' . strtoupper(Str::random(6));
+        $journal->created_by = auth()->id();
+        $journal->summary = $request->summary;
+        $journal->save();
+
+        foreach ($request->entries as $entry) {
+            $journalEntry = addJournalEntry($journal->id, $entry);
+
+            // 🔹 Trigger event to update cumulative balance
+            EntryCreated::dispatch($journalEntry);
+        }
+
+        DB::commit();
+
+        return redirect()->route('accounting.journal.index')
+            ->with('success', 'Journal Entry Created Successfully.');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->withErrors(['An error occurred while saving.'])->withInput();
+    }
+}
    
   public function update(Request $request, $journalId)
     {

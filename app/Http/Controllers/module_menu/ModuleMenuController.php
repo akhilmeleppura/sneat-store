@@ -13,7 +13,7 @@ class ModuleMenuController extends Controller
     {
         $modules = ModuleHelper::getSettingsModules();
         $moduleMenus = [];
-
+info($modules);
         foreach ($modules as $module) {
             $controllerClass = "\\Modules\\" . $module->slug .  "\\App\\Http\\Controllers\\MenuController";
 

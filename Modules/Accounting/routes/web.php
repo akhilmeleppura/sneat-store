@@ -13,7 +13,7 @@ use Modules\Accounting\Http\Controllers\TrialBalance\TrialBalanceController;
 
 Route::middleware(['auth', 'check.permission'])->prefix('accounting')->group(function () {
 // Route::prefix('accounting')->group(function () {
-Route::get('/charts-of-account', [AccountingController::class, 'index'])->name('accounting.index');
+Route::get('/chart-of-accounts', [AccountingController::class, 'index'])->name('accounting.index');
 //   Route::get('/charts-of-account', [AccountingController::class, 'chartofaccounts'])->name('index');
   // Route::get('/prefix', [AccountingController::class, 'prefix'])->name('index');
    Route::post('/chart/store', [AccountingController::class, 'store'])->name('accounting.chart.store');
@@ -58,5 +58,5 @@ Route::get('/accounting/ledger/{id}/view', [LedgerController::class, 'details'])
    Route::get('/accounting/trial-balance', [TrialBalanceController::class, 'index'])->name('accounting.trial-balance.index');
 Route::get('/accounting/trial-balance/export-pdf', [TrialBalanceController::class, 'exportPdf'])->name('accounting.trial-balance.export-pdf');
 
-Route::get('accounting/journal/create', [JournalEntriesController::class, 'create'])->name('accounting.journal.create');
+// Route::get('accounting/journal/create', [JournalEntriesController::class, 'create'])->name('accounting.journal.create');
 Route::post('/journal', [JournalEntriesController::class, 'store'])->name('accoutnig.journal.store');

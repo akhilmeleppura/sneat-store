@@ -15,3 +15,5 @@
                   ? 'layouts.layoutFront'
                   : 'layouts.contentNavbarLayout')))
 @endisset
+
+

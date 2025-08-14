@@ -24,7 +24,8 @@ class ChartOfAccount extends Model
     ];
 
 
-    public function openingBalance()
+
+public function openingBalance()
 {
     return $this->hasOne(OpeningBalance::class, 'chart_of_account_id');
 }

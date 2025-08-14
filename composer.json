@@ -43,7 +43,8 @@
       "Tests\\": "tests/"
     },
     "files": [
-      "app/Helpers/Helpers.php"
+      "app/Helpers/Helpers.php",
+      "Modules/Accounting/App/Helpers/SinglePointAccess/addJournalEntry.php"
     ]
   },
   "scripts": {

@@ -21,7 +21,7 @@ class MenuController extends Controller
                         [
                             'name' => 'Accounting',
                             'slug' => 'accounting.index',
-                            'url'  => '/accounting',
+                            'url'  => '/accounting/chart-of-accounts',
                             'permissions' => 'user.view'
                         ],
                         [

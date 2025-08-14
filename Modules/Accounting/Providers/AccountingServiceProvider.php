@@ -7,6 +7,9 @@ use Illuminate\Support\ServiceProvider;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Illuminate\Support\Facades\Event;
+use Modules\Accounting\Events\EntryCreated;
+use Modules\Accounting\Listeners\UpdateCumulativeBalance;
 
 class AccountingServiceProvider extends ServiceProvider
 {
@@ -27,6 +30,8 @@ class AccountingServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        Event::listen(EntryCreated::class, UpdateCumulativeBalance::class);
+
     }
 
     /**

@@ -21,25 +21,42 @@ class Reply
     /**
      * Return a successful response without data
      */
-    public static function success(string $message, int $statusCode = 200): JsonResponse
+    // public static function success(string $message, int $statusCode = 200): JsonResponse
+    // {
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => $message
+    //     ], $statusCode);
+    // }
+
+     public static function success($message, $status = 200)
     {
         return response()->json([
             'success' => true,
+            'type'    => 'success', // for SweetAlert icon
             'message' => $message
-        ], $statusCode);
+        ], $status);
     }
 
-    /**
-     * Return an error response
-     */
-    public static function error(string $message, array $errors = [], int $statusCode = 400): JsonResponse
+    public static function error($message, $status = 400)
     {
         return response()->json([
             'success' => false,
-            'message' => $message,
-            'errors' => $errors
-        ], $statusCode);
+            'type'    => 'error', // for SweetAlert icon
+            'message' => $message
+        ], $status);
     }
+    /**
+     * Return an error response
+     */
+    // public static function error(string $message, array $errors = [], int $statusCode = 400): JsonResponse
+    // {
+    //     return response()->json([
+    //         'success' => false,
+    //         'message' => $message,
+    //         'errors' => $errors
+    //     ], $statusCode);
+    // }
 
     /**
      * Return a validation error response
