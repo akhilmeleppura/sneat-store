@@ -2,5 +2,6 @@
     "Accounting": true,
     "SampleModule": true,
     "Permission": true,
-    "Billing": true
+    "Billing": true,
+    "General": true
 }

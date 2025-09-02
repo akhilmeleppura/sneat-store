@@ -11,6 +11,8 @@ class BillingDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+         BillingPaymentStatusSeeder::class,
+        ]);
     }
 }

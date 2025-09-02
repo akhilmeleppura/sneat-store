@@ -12,6 +12,8 @@
 
 @section('page-script')
     @vite('Modules/Billing/resources/assets/js/billings-list.js')
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 @endsection
 
 @section('content')

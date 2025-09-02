@@ -10,7 +10,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-
+use Modules\General\App\Models\Company;
+use Modules\General\App\Models\Branch;
 
 class User extends Authenticatable
 {
@@ -36,6 +37,8 @@ class User extends Authenticatable
         'role_id',
     'is_super_admin',
     'is_supre_admin',
+    'company_id',
+    'branch_id',
     ];
 
     /**
@@ -59,6 +62,14 @@ class User extends Authenticatable
         'profile_photo_url',
     ];
 
+    public function company()
+{
+    return $this->belongsTo(Company::class);
+}
+public function branch()
+{
+    return $this->belongsTo(Branch::class);
+}
     /**
      * Get the attributes that should be cast.
      *

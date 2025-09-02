@@ -1,7 +1,3 @@
-/**
- * App Invoice List (js)
- */
-
 'use strict';
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -9,15 +5,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (dt_invoice_table) {
     const dt_invoice = new DataTable(dt_invoice_table, {
-      ajax: assetsPath + 'json/invoice-list.json',
+      ajax: baseUrl + 'accounting/billings/invoices/list',
       columns: [
         { data: 'invoice_id' },
         { data: 'invoice_id', orderable: false, render: DataTable.render.select() },
         { data: 'invoice_id' },
         { data: 'invoice_status' },
-        { data: 'issued_date' },
         { data: 'client_name' },
         { data: 'total' },
+        { data: 'issued_date' }, // ✅ fixed (was issue_date)
         { data: 'balance' },
         { data: 'invoice_status' },
         { data: 'action' }
@@ -44,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function () {
         {
           targets: 2,
           render: function (data, type, full) {
-            return `<a href="${baseUrl}app/invoice/preview">#${full['invoice_id']}</a>`;
+            return `<a href="${baseUrl}accounting/billings/invoices/${full['invoice_id']}">#${full['invoice_id']}</a>`;
           }
         },
         {
@@ -53,32 +49,29 @@ document.addEventListener('DOMContentLoaded', function () {
           render: function (data, type, full) {
             const invoiceStatus = full['invoice_status'];
             const balance = full['balance'];
-            const dueDate = full['due_date'];
+            const dueDate = full['due_date'] ? new Date(full['due_date']) : null;
+            const formattedDate = dueDate && !isNaN(dueDate.getTime()) 
+              ? dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+              : 'Not set';
 
             const roleBadgeObj = {
               Sent: '<span class="badge p-1_5 rounded-pill bg-label-secondary"><i class="icon-base icon-16px bx bx-envelope"></i></span>',
-              Draft:
-                '<span class="badge p-1_5 rounded-pill bg-label-primary"><i class="icon-base icon-16px bx bx-folder"></i></span>',
-              'Past Due':
-                '<span class="badge p-1_5 rounded-pill bg-label-danger"><i class="icon-base icon-16px bx bx-error"></i></span>',
-              'Partial Payment':
-                '<span class="badge p-1_5 rounded-pill bg-label-success"><i class="icon-base icon-16px bx bx-check"></i></span>',
+              Draft: '<span class="badge p-1_5 rounded-pill bg-label-primary"><i class="icon-base icon-16px bx bx-folder"></i></span>',
+              'Past Due': '<span class="badge p-1_5 rounded-pill bg-label-danger"><i class="icon-base icon-16px bx bx-error"></i></span>',
+              'Partial Payment': '<span class="badge p-1_5 rounded-pill bg-label-success"><i class="icon-base icon-16px bx bx-check"></i></span>',
               Paid: '<span class="badge p-1_5 rounded-pill bg-label-warning"><i class="icon-base icon-16px bx bx-pie-chart-alt"></i></span>',
-              Downloaded:
-                '<span class="badge p-1_5 rounded-pill bg-label-info"><i class="icon-base icon-16px bx bx-down-arrow-alt"></i></span>'
+              Downloaded: '<span class="badge p-1_5 rounded-pill bg-label-info"><i class="icon-base icon-16px bx bx-down-arrow-alt"></i></span>'
             };
 
-            // Sanitize tooltip content by escaping double quotes
             const tooltipContent = `
               ${invoiceStatus}<br>
               <span class="fw-medium">Balance:</span> ${balance}<br>
-              <span class="fw-medium">Due Date:</span> ${dueDate}
+              <span class="fw-medium">Due Date:</span> ${formattedDate}
             `.replace(/"/g, '&quot;');
 
             return `
-              <span class="d-inline-block" data-bs-toggle="tooltip" data-bs-html="true" title="<span>${tooltipContent}">
-                ${roleBadgeObj[invoiceStatus] || ''}
-              </span>
+              <span class="d-inline-block" data-bs-toggle="tooltip" data-bs-html="true" title="<span>${tooltipContent}"> 
+                ${roleBadgeObj[invoiceStatus] || ''} 
               </span>
             `;
           }
@@ -87,9 +80,9 @@ document.addEventListener('DOMContentLoaded', function () {
           targets: 4,
           responsivePriority: 2,
           render: function (data, type, full) {
-            const name = full['client_name'];
-            const service = full['service'];
-            const image = full['avatar_image'];
+            const name = full['client_name'] || 'Unknown';
+            const service = full['service'] || 'General Service';
+            const image = full['avatar_image'] || false;
             const randNum = Math.floor(Math.random() * 11) + 1;
             const userImg = `${randNum}.png`;
             let output;
@@ -125,26 +118,39 @@ document.addEventListener('DOMContentLoaded', function () {
         {
           targets: 5,
           render: function (data, type, full) {
-            const total = full['total'];
+            const total = full['total'] || '0.00';
             return `<span class="d-none">${total}</span>$${total}`;
           }
         },
         {
           targets: 6,
           render: function (data, type, full) {
-            const dueDate = new Date(full['due_date']);
-            return `
-              <span class="d-none">${dueDate.toISOString().slice(0, 10).replace(/-/g, '')}</span>
-              ${dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-            `;
+            try {
+              const rawDate = full['issued_date']; // ✅ fixed
+              if (!rawDate) {
+                return '<span class="text-muted">Not set</span>';
+              }
+              const dateOnly = rawDate.split(' ')[0]; // handles YYYY-MM-DD or YYYY-MM-DD HH:mm:ss
+              const issueDate = new Date(dateOnly);
+              if (isNaN(issueDate.getTime())) {
+                return '<span class="text-muted">Invalid date</span>';
+              }
+              return `
+                <span class="d-none">${issueDate.toISOString().slice(0, 10).replace(/-/g, '')}</span>
+                ${issueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              `;
+            } catch (e) {
+              console.error('Date formatting error:', e);
+              return '<span class="text-muted">Invalid date</span>';
+            }
           }
         },
         {
           targets: 7,
           orderable: false,
           render: function (data, type, full) {
-            const balance = full['balance'];
-            if (balance === 0) {
+            const balance = full['balance'] || '0.00';
+            if (balance === 0 || balance === '0.00') {
               return '<span class="badge bg-label-success text-capitalized"> Paid </span>';
             } else {
               return `<span class="d-none">${balance}</span><span class="text-heading">${balance}</span>`;
@@ -160,20 +166,16 @@ document.addEventListener('DOMContentLoaded', function () {
           title: 'Actions',
           searchable: false,
           orderable: false,
-          render: function () {
+          render: function (data, type, full) {
             return (
               '<div class="d-flex align-items-center">' +
-              '<a href="javascript:;" data-bs-toggle="tooltip" class="btn btn-icon delete-record" data-bs-placement="top" title="Delete"><i class="icon-base bx bx-trash icon-md"></i></a>' +
-              '<a href="' +
-              baseUrl +
-              'app/invoice/preview" data-bs-toggle="tooltip" class="btn btn-icon" data-bs-placement="top" title="Preview Invoice"><i class="icon-base bx bx-show icon-md"></i></a>' +
+              `<a href="javascript:;" data-bs-toggle="tooltip" class="btn btn-icon delete-record" data-id="${full['invoice_id']}" data-bs-placement="top" title="Delete"><i class="icon-base bx bx-trash icon-md"></i></a>` +
+              `<a href="${baseUrl}accounting/billings/invoices/${full['invoice_id']}" data-bs-toggle="tooltip" class="btn btn-icon" data-bs-placement="top" title="Preview Invoice"><i class="icon-base bx bx-show icon-md"></i></a>` +
               '<div class="dropdown">' +
               '<a href="javascript:;" class="btn dropdown-toggle hide-arrow btn-icon p-0" data-bs-toggle="dropdown"><i class="icon-base bx bx-dots-vertical-rounded icon-md"></i></a>' +
               '<div class="dropdown-menu dropdown-menu-end">' +
               '<a href="javascript:;" class="dropdown-item">Download</a>' +
-              '<a href="' +
-              baseUrl +
-              'app/invoice/edit" class="dropdown-item">Edit</a>' +
+              `<a href="${baseUrl}accounting/billings/invoices/${full['invoice_id']}/edit" class="dropdown-item">Edit</a>` +
               '<a href="javascript:;" class="dropdown-item">Duplicate</a>' +
               '</div>' +
               '</div>'
@@ -245,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
           renderer: function (api, rowIdx, columns) {
             const data = columns
               .map(function (col) {
-                return col.title !== '' // ? Do not show row in modal popup if title is blank (for check box)
+                return col.title !== ''
                   ? `<tr data-dt-row="${col.rowIndex}" data-dt-column="${col.columnIndex}">
                       <td>${col.title}:</td>
                       <td>${col.data}</td>
@@ -270,43 +272,31 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       },
       initComplete: function () {
-        // Ensure the container for the Invoice Status filter is created
         let invoiceStatusContainer = document.querySelector('.invoice_status');
         if (!invoiceStatusContainer) {
-          // Create the container if it doesn't exist
           invoiceStatusContainer = document.createElement('div');
           invoiceStatusContainer.className = 'invoice_status';
-
-          // Append it to a suitable location in your DataTable's layout
-          // Example: Appending to the filter area (adjust as needed)
           const filterArea = document.querySelector('.dt-layout-end');
           if (filterArea) {
             filterArea.appendChild(invoiceStatusContainer);
           }
         }
 
-        // Adding role filter once the table is initialized
         this.api()
           .columns(8)
           .every(function () {
             const column = this;
-
-            // Create the dropdown for "Invoice Status"
             const select = document.createElement('select');
             select.id = 'UserRole';
             select.className = 'form-select';
             select.innerHTML = '<option value=""> Invoice Status </option>';
-
-            // Append the dropdown to the invoice status container
             invoiceStatusContainer.appendChild(select);
 
-            // Add change event listener to filter the column based on selected value
             select.addEventListener('change', function () {
               const val = select.value ? `^${select.value}$` : '';
               column.search(val, true, false).draw();
             });
 
-            // Populate the dropdown with unique values from the column data
             column
               .data()
               .unique()
@@ -322,16 +312,42 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
 
-    function deleteRecord(event) {
-      let row = document.querySelector('.dtr-expanded');
-      if (event) {
-        row = event.target.parentElement.closest('tr');
-      }
-      if (row) {
-        dt_invoice.row(row).remove().draw();
-      }
+    // DELETE function with SweetAlert + AJAX call
+    function handleDelete(invoiceId, row, modal = null) {
+      Swal.fire({
+        title: 'Are you sure?',
+        text: "This invoice will be permanently deleted!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch(`${baseUrl}accounting/billings/invoices/${invoiceId}`, {
+            method: 'DELETE',
+            headers: {
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+            .then(res => res.json())
+            .then(data => {
+              Swal.fire('Deleted!', data.message || 'Invoice has been deleted.', 'success');
+              dt_invoice.ajax.reload();
+              if (modal) {
+                const closeButton = modal.querySelector('.btn-close');
+                if (closeButton) closeButton.click();
+              }
+            })
+            .catch(() => {
+              Swal.fire('Error!', 'Something went wrong while deleting.', 'error');
+            });
+        }
+      });
     }
 
+    // Binding delete button events
     function bindDeleteEvent() {
       const invoiceTable = document.querySelector('.invoice-list-table');
       const modal = document.querySelector('.dtr-bs-modal');
@@ -339,14 +355,12 @@ document.addEventListener('DOMContentLoaded', function () {
       if (invoiceTable && invoiceTable.classList.contains('collapsed')) {
         if (modal) {
           modal.addEventListener('click', function (event) {
-            if (event.target.parentElement.classList.contains('delete-record')) {
-              const tooltipInstance = bootstrap.Tooltip.getInstance(event.target.parentElement);
-              if (tooltipInstance) {
-                tooltipInstance.dispose();
-              }
-              deleteRecord();
-              const closeButton = modal.querySelector('.btn-close');
-              if (closeButton) closeButton.click(); // Simulates a click on the close button
+            if (event.target.closest('.delete-record')) {
+              const btn = event.target.closest('.delete-record');
+              const invoiceId = btn.getAttribute('data-id');
+              const tooltipInstance = bootstrap.Tooltip.getInstance(btn);
+              if (tooltipInstance) tooltipInstance.dispose();
+              handleDelete(invoiceId, null, modal);
             }
           });
         }
@@ -354,22 +368,21 @@ document.addEventListener('DOMContentLoaded', function () {
         const tableBody = invoiceTable?.querySelector('tbody');
         if (tableBody) {
           tableBody.addEventListener('click', function (event) {
-            if (event.target.parentElement.classList.contains('delete-record')) {
-              const tooltipInstance = bootstrap.Tooltip.getInstance(event.target.parentElement);
-              if (tooltipInstance) {
-                tooltipInstance.dispose();
-              }
-              deleteRecord(event);
+            if (event.target.closest('.delete-record')) {
+              const btn = event.target.closest('.delete-record');
+              const invoiceId = btn.getAttribute('data-id');
+              const row = btn.closest('tr');
+              const tooltipInstance = bootstrap.Tooltip.getInstance(btn);
+              if (tooltipInstance) tooltipInstance.dispose();
+              handleDelete(invoiceId, row);
             }
           });
         }
       }
     }
 
-    // Initial event binding
     bindDeleteEvent();
 
-    // Re-bind events when modal is shown or hidden
     document.addEventListener('show.bs.modal', function (event) {
       if (event.target.classList.contains('dtr-bs-modal')) {
         bindDeleteEvent();
@@ -382,7 +395,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
 
-    // Initialize tooltips on each table draw
     dt_invoice.on('draw', function () {
       const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
       tooltipTriggerList.forEach(tooltipTriggerEl => {
@@ -393,8 +405,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // Filter form control to default size
-  // ? setTimeout used for multilingual table initialization
   setTimeout(() => {
     const elementsToModify = [
       { selector: '.dt-buttons .btn', classToRemove: 'btn-secondary' },
@@ -406,8 +416,7 @@ document.addEventListener('DOMContentLoaded', function () {
       {
         selector: '.dt-layout-end',
         classToRemove: 'justify-content-between ms-auto',
-        classToAdd:
-          'justify-content-md-between justify-content-center d-flex flex-wrap gap-sm-4 mb-sm-0 mb-5 mt-0 pe-md-3 ps-0'
+        classToAdd: 'justify-content-md-between justify-content-center d-flex flex-wrap gap-sm-4 mb-sm-0 mb-5 mt-0 pe-md-3 ps-0'
       },
       {
         selector: '.dt-layout-start',
@@ -418,7 +427,6 @@ document.addEventListener('DOMContentLoaded', function () {
       { selector: '.dt-layout-full', classToRemove: 'col-md col-12', classToAdd: 'table-responsive' }
     ];
 
-    // Delete record
     elementsToModify.forEach(({ selector, classToRemove, classToAdd }) => {
       document.querySelectorAll(selector).forEach(element => {
         if (classToRemove) {

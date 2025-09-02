@@ -4,6 +4,14 @@ namespace Modules\Billing\App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Billing\App\Models\BillingInvoice;
+use Modules\Billing\App\Models\BillingInvoiceItem;
+use App\Models\Customers\Customer;
+use Modules\General\App\Models\Company;
+use Modules\General\App\Models\Branch;
+use Modules\Billing\App\Models\BillingItem;
+use App\Models\Taxes\Tax;
+
 
 class BillingController extends Controller
 {
@@ -18,9 +26,98 @@ class BillingController extends Controller
     /**
      * Show the form for creating a new resource.
      */
+    // public function create()
+    // {
+    //     $invoice = new BillingInvoice();
+    //     $customers =  Customer::all();
+    //     return view('billing::billings.form', compact('invoice','customers'
+    // ));
+    // }
+
+    // public function create()
+    // {
+    //     $invoice = new BillingInvoice();
+    //     $customers = Customer::all();
+
+    //     $user = auth()->user(); // ✅ current logged-in user
+
+    //     // fetch company and branch from user table relations/fields
+    //     $company = Company::find($user->company_id);
+    //     $branch = Branch::find($user->branch_id);
+    //     $items = BillingItem::all();
+    //     $taxes = Tax::all();
+    //     $clients = Customer::all();
+    // $lastInvoice = BillingInvoice::latest('id')->first();
+
+    // if ($lastInvoice) {
+    //     // Get prefix from DB
+    //     $prefix = $lastInvoice->document_prefix;
+
+    //     // Extract numeric part from document_number
+    //     $lastNumber = (int) filter_var($lastInvoice->document_number, FILTER_SANITIZE_NUMBER_INT);
+
+    //     // Increment and format back
+    //     $nextInvoiceNumber = $prefix .'-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+    // } else {
+    //     // First invoice fallback
+    //     $prefix = 'INV-'; // default prefix
+    //     $nextInvoiceNumber = $prefix . '0001';
+    // }
+    //     return view('billing::billings.form', compact('invoice', 'customers', 'company', 'branch','items','taxes','clients','nextInvoiceNumber'));
+    // }
+
     public function create()
     {
-        return view('billing::billings.invoices');
+        $invoice = new BillingInvoice();
+        $clients = Customer::all();
+        $user = auth()->user();
+        $company = Company::find($user->company_id);
+        $branch = Branch::find($user->branch_id);
+        $items = BillingItem::all();
+        $taxes = Tax::all();
+
+        $lastInvoice = BillingInvoice::latest('id')->first();
+        if ($lastInvoice) {
+            $prefix = $lastInvoice->document_prefix;
+            $lastNumber = (int) filter_var($lastInvoice->document_number, FILTER_SANITIZE_NUMBER_INT);
+            $nextInvoiceNumber = $prefix . '-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+        } else {
+            $prefix = 'INV-';
+            $nextInvoiceNumber = $prefix . '0001';
+        }
+
+        return view('billing::billings.form', compact(
+            'invoice',
+            'clients',
+            'company',
+            'branch',
+            'items',
+            'taxes',
+            'nextInvoiceNumber'
+        ));
+    }
+
+    public function edit($id)
+    {
+        $invoice = BillingInvoice::findOrFail($id);
+        $clients = Customer::all();
+        $user = auth()->user();
+        $company = Company::find($user->company_id);
+        $branch = Branch::find($user->branch_id);
+        $items = BillingItem::all();
+        $taxes = Tax::all();
+
+        $invoiceNumber = $invoice->document_prefix . '-' . $invoice->document_number;
+
+        return view('billing::billings.edit', compact(
+            'invoice',
+            'clients',
+            'company',
+            'branch',
+            'items',
+            'taxes',
+            'invoiceNumber'
+        ));
     }
 
     /**
@@ -31,18 +128,31 @@ class BillingController extends Controller
     /**
      * Show the specified resource.
      */
-    public function show($id)
+    public function show($invoiceId)
     {
-        return view('billing::show');
+        $invoice = BillingInvoice::with([
+            'customer',
+            'items.billingItem',
+            'items.item',
+            'items.company',  // Load company from items
+            'items.branch',   // Load branch from items
+            'salesperson',
+            'createdBy'
+        ])->findOrFail($invoiceId);
+
+        return view('billing::billings.show', compact('invoice'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit($id)
-    {
-        return view('billing::edit');
-    }
+    //    public function edit($id)
+    // {
+    //     $invoice = BillingInvoice::findOrFail($id);
+    //      $customers =  Customer::all();
+    //     return view('billing::billings.form', compact('invoice','customers'
+    // ));
+    // }
 
     /**
      * Update the specified resource in storage.

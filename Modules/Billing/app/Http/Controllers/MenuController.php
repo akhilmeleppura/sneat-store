@@ -14,7 +14,7 @@ class MenuController extends Controller
                 [
                     'name' => 'Billings',
                     'slug' => 'Billings',
-                    'url'  => '#', 
+                    'url'  => '#',
                     'icon' => 'bx bx-calculator',
                     'permissions' => 'user.view',
                     'submenu' => [
@@ -22,10 +22,10 @@ class MenuController extends Controller
                             'name' => 'Billings',
                             'slug' => 'accounting.billings.index',
                             'url'  => 'accounting/billings',
-                            'permissions' => 'user.view'    
-                           
-                       ]
-                        
+                            'permissions' => 'user.view'
+
+                        ]
+
                     ]
                 ]
             ]
