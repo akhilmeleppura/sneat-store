@@ -26,45 +26,7 @@ class BillingController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    // public function create()
-    // {
-    //     $invoice = new BillingInvoice();
-    //     $customers =  Customer::all();
-    //     return view('billing::billings.form', compact('invoice','customers'
-    // ));
-    // }
-
-    // public function create()
-    // {
-    //     $invoice = new BillingInvoice();
-    //     $customers = Customer::all();
-
-    //     $user = auth()->user(); // ✅ current logged-in user
-
-    //     // fetch company and branch from user table relations/fields
-    //     $company = Company::find($user->company_id);
-    //     $branch = Branch::find($user->branch_id);
-    //     $items = BillingItem::all();
-    //     $taxes = Tax::all();
-    //     $clients = Customer::all();
-    // $lastInvoice = BillingInvoice::latest('id')->first();
-
-    // if ($lastInvoice) {
-    //     // Get prefix from DB
-    //     $prefix = $lastInvoice->document_prefix;
-
-    //     // Extract numeric part from document_number
-    //     $lastNumber = (int) filter_var($lastInvoice->document_number, FILTER_SANITIZE_NUMBER_INT);
-
-    //     // Increment and format back
-    //     $nextInvoiceNumber = $prefix .'-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
-    // } else {
-    //     // First invoice fallback
-    //     $prefix = 'INV-'; // default prefix
-    //     $nextInvoiceNumber = $prefix . '0001';
-    // }
-    //     return view('billing::billings.form', compact('invoice', 'customers', 'company', 'branch','items','taxes','clients','nextInvoiceNumber'));
-    // }
+   
 
     public function create()
     {
@@ -143,16 +105,7 @@ class BillingController extends Controller
         return view('billing::billings.show', compact('invoice'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    //    public function edit($id)
-    // {
-    //     $invoice = BillingInvoice::findOrFail($id);
-    //      $customers =  Customer::all();
-    //     return view('billing::billings.form', compact('invoice','customers'
-    // ));
-    // }
+   
 
     /**
      * Update the specified resource in storage.

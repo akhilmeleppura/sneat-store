@@ -19,13 +19,23 @@ class MenuController extends Controller
                     'permissions' => 'user.view',
                     'submenu' => [
                         [
-                            'name' => 'Billings',
+                            'name' => 'Invoices',
                             'slug' => 'accounting.billings.index',
                             'url'  => 'accounting/billings',
                             'permissions' => 'user.view'
-
+                        ],
+                        [
+                            'name' => 'Debit Notes',
+                            'slug' => 'accounting.debit-notes.index',
+                            'url'  => 'accounting/billings/debit-notes',
+                            'permissions' => 'user.view'
+                        ],
+                        [
+                            'name' => 'Credit Notes',
+                            'slug' => 'accounting.credit-notes.index',
+                            'url'  => 'accounting/billings/credit-notes',
+                            'permissions' => 'user.view'
                         ]
-
                     ]
                 ]
             ]

@@ -4,6 +4,8 @@ namespace Modules\Billing\App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 // use Modules\Billing\Database\Factories\BillingPaymentStatusFactory;
 
 class BillingPaymentStatus extends Model
