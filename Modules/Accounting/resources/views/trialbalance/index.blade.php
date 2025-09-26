@@ -22,60 +22,85 @@
         padding: 25px 30px;
     }
 
-    /* Filter Bar - New Style */
+    /* Updated Filter Bar */
     .filter-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         background: white;
         border-radius: 8px;
-        padding: 10px 20px;
-        margin-bottom: 20px;
+        padding: 15px 20px;
+        margin-bottom: 25px;
         border: 1px solid #eee;
-        display: flex;
-        align-items: center;
     }
 
-    .filter-container .input-group {
+    .filter-group {
         display: flex;
         align-items: center;
-        flex-grow: 1;
+        gap: 10px; /* Provides spacing between items */
     }
 
-    .filter-container .input-group-text {
+    .filter-group .input-group-text {
+        font-weight: 500;
+        color: #555;
         background: transparent;
         border: none;
         padding: 0;
-        font-weight: 500;
-        color: #555;
-        margin-right: 8px;
     }
-
-    .filter-container .form-control {
+    
+    .filter-group .form-control {
         border: 1px solid #ddd;
         padding: 8px 12px;
         border-radius: 4px;
-        flex-grow: 1;
+        width: 250px; /* Fixed width for date picker */
     }
 
-    .filter-container .btn {
-        padding: 8px 15px;
-        border-radius: 4px;
-        margin-left: 10px;
+    .btn {
+        padding: 8px 18px;
+        border-radius: 5px;
+        font-weight: 500;
+        cursor: pointer;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        border: 1px solid transparent;
+        transition: all 0.2s ease-in-out;
     }
 
-    .filter-container .btn-success {
-        background: #007bff;
+    .btn-primary {
+        background-color: #007bff;
         border-color: #007bff;
         color: white;
     }
+    
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #0056b3;
+    }
+    
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        border-color: #545b62;
+    }
 
-    .filter-container .btn-outline-secondary {
-        border: 1px solid #ddd;
-        color: #555;
+    .btn-light {
+        background-color: #f8f9fa;
+        border-color: #ddd;
+        color: #333;
+    }
+    
+    .btn-light:hover {
+        background-color: #e2e6ea;
     }
 
     /* Title Section */
     .title-section {
-        display: flex;
-        justify-content: space-between;
         margin-bottom: 25px;
     }
 
@@ -85,16 +110,6 @@
         color: #333;
         text-transform: uppercase;
         margin: 0;
-    }
-
-    .export-btn {
-        background: #007bff;
-        color: white;
-        padding: 10px 18px;
-        border-radius: 5px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
     }
 
     /* Info Bar */
@@ -199,17 +214,19 @@
     <!-- Filter Section -->
     <form method="GET" action="{{ route('accounting.trial-balance.index') }}">
         <div class="filter-container">
-            <div class="input-group">
+            <div class="filter-group">
                 <span class="input-group-text">Duration</span>
                 <input type="text" name="date_range" class="form-control flatpickr-range" 
                        value="{{ request('date_range') }}" placeholder="Start Date to End Date">
-                <button type="submit" class="btn btn-success">OK</button>
-                <a href="{{ route('accounting.trial-balance.index') }}" class="btn btn-outline-secondary">Clear</a>
+                <button type="submit" class="btn btn-primary">Apply</button>
+                <a href="{{ route('accounting.trial-balance.index') }}" class="btn btn-light">Clear</a>
             </div>
-            <button type="submit" formaction="{{ route('accounting.trial-balance.export-pdf') }}" 
-                    class="export-btn">
-                Export as PDF
-            </button>
+            <div class="filter-group">
+                <button type="submit" formaction="{{ route('accounting.trial-balance.export-pdf') }}" 
+                        class="btn btn-secondary">
+                    Export as PDF
+                </button>
+            </div>
         </div>
     </form>
 
@@ -326,11 +343,6 @@ document.addEventListener('DOMContentLoaded', function() {
         locale: {
             rangeSeparator: " to "
         }
-    });
-    
-    // Ensure PDF export maintains white text in headers/footers
-    document.querySelector('button[formaction*="export-pdf"]').addEventListener('click', function() {
-        // Add any necessary PDF export preparation here
     });
 });
 </script>

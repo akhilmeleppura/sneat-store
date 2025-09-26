@@ -10,7 +10,7 @@ class BillingItem extends Model
 {
     use HasFactory;
 
-   protected $table = 'billing_items';
+    protected $table = 'billing_items';
 
     protected $fillable = [
         'name',
@@ -52,5 +52,4 @@ class BillingItem extends Model
             default => 'Unknown',
         };
     }
-   
 }

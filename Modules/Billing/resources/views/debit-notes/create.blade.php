@@ -41,33 +41,68 @@
             // Initialize calculations
             calculateSubtotal();
             // =========================================================================================
-            // MODIFIED AND IMPROVED EVENT LISTENER FOR 'APPLY CHANGES'
+            // FIXED AND IMPROVED EVENT LISTENER FOR 'APPLY CHANGES'
             // =========================================================================================
             document.addEventListener('click', function(e) {
                 if (e.target.classList.contains('btn-apply-changes')) {
                     e.preventDefault();
                     e.stopPropagation();
+
                     const dropdown = e.target.closest('.dropdown-menu');
                     const repeaterWrapper = dropdown.closest('.repeater-wrapper');
+
                     // 1. Get the new discount and tax values from the dropdown inputs
                     const discountValue = parseFloat(dropdown.querySelector('#discountInput').value) || 0;
-                    const taxValue = dropdown.querySelector('#taxInput1').value || '0%'; // e.g., "5%"
+                    const taxSelect = dropdown.querySelector('#taxInput1');
+                    const taxValue = taxSelect.value; // e.g., "10%"
+                    const selectedOption = taxSelect.options[taxSelect.selectedIndex];
+
+                    // Extract tax percentage and ID from the selected option
+                    let taxPercent = 0;
+                    let taxId = 0;
+
+                    if (selectedOption) {
+                        // Extract percentage from the text (e.g., "VAT (10%)" -> 10)
+                        const match = selectedOption.text.match(/(\d+(?:\.\d+)?)%/);
+                        if (match) {
+                            taxPercent = parseFloat(match[1]);
+                        }
+
+                        // Get the tax ID from the data attribute if available
+                        taxId = selectedOption.getAttribute('data-id') || 0;
+                    }
+
                     // 2. Update the percentage text displays in the main item row
                     const discountDisplay = repeaterWrapper.querySelector('.discount');
                     discountDisplay.textContent = discountValue + '%';
+
                     const taxDisplay = repeaterWrapper.querySelector('.tax-1');
-                    taxDisplay.textContent = taxValue;
+                    taxDisplay.textContent = taxPercent + '%';
+
+                    // Store tax ID in a hidden field for form submission
+                    let taxIdField = repeaterWrapper.querySelector('.item-tax-id');
+                    if (!taxIdField) {
+                        taxIdField = document.createElement('input');
+                        taxIdField.type = 'hidden';
+                        taxIdField.className = 'item-tax-id';
+                        repeaterWrapper.appendChild(taxIdField);
+                    }
+                    taxIdField.value = taxId;
+
                     // 3. Call the existing calculation function. It will now use the new percentages
                     // to calculate and display the discount amount, tax amount, and total price.
                     calculateItemTotal(repeaterWrapper);
+
                     // 4. Recalculate the grand totals for the entire debit note
                     calculateSubtotal();
+
                     // 5. Close the dropdown menu
                     const dropdownToggle = repeaterWrapper.querySelector('[data-bs-toggle="dropdown"]');
                     const bsDropdown = bootstrap.Dropdown.getInstance(dropdownToggle);
                     if (bsDropdown) {
                         bsDropdown.hide();
                     }
+
                     // Optional: Add a temporary visual effect to confirm the update
                     const priceDisplays = [
                         repeaterWrapper.querySelector('.item-discount-amount'),
@@ -81,7 +116,7 @@
                 }
             });
             // =========================================================================================
-            // END OF MODIFIED SECTION
+            // END OF FIXED SECTION
             // =========================================================================================
         });
         // Calculate item total with discount and tax
@@ -90,16 +125,22 @@
             const unitPrice = parseFloat(row.querySelector('.selling-unit-price').value) || 0;
             const discountPercent = parseFloat(row.querySelector('.discount').textContent) || 0;
             const taxPercent = parseFloat(row.querySelector('.tax-1').textContent) || 0;
+
             // Calculate base amount
             const baseAmount = qty * unitPrice;
+
             // Calculate discount amount
             const discountAmount = baseAmount * (discountPercent / 100);
+
             // Calculate taxable amount after discount
             const taxableAmount = baseAmount - discountAmount;
+
             // Calculate tax amount
             const taxAmount = taxableAmount * (taxPercent / 100);
+
             // Calculate final total
             const totalAmount = taxableAmount + taxAmount;
+
             // Update display elements for this item row
             row.querySelector('.item-discount-amount').textContent = '$' + discountAmount.toFixed(2);
             row.querySelector('.item-tax-amount').textContent = '$' + taxAmount.toFixed(2);
@@ -322,27 +363,29 @@
             // We use document_discount_amount which is also set by calculateSubtotal()
             formData.set('document_discount_amount', document.getElementById("document_discount_amount").value);
 
-            // FIXED: Properly handle item data submission
-            const repeaterWrappers = document.querySelectorAll('.repeater-wrapper');
-            repeaterWrappers.forEach((row, index) => {
-                const itemId = row.querySelector('.item-details')?.value || '';
-                const qty = row.querySelector('.quantity')?.value || '0';
-                const unitPrice = row.querySelector('.selling-unit-price')?.value || '0.00';
-                const totalPrice = row.querySelector('.total-price')?.value || '0.00';
+            // FIXED: Send both tax ID and tax percentage for items
+            document.querySelectorAll('.repeater-wrapper').forEach((row, index) => {
+                const itemId = row.querySelector('.item-details')?.value;
+                const qty = parseFloat(row.querySelector('.quantity')?.value || 0);
+                const unitPrice = parseFloat(row.querySelector('.selling-unit-price')?.value || 0);
+                const totalPrice = parseFloat(row.querySelector('.total-price')?.value || 0);
 
-                const discountElement = row.querySelector('.discount');
-                const itemDiscountPercent = discountElement ? parseFloat(discountElement.textContent) || 0 : 0;
+                const itemDiscountPercent = parseFloat(row.querySelector('.discount').textContent) || 0;
+                const itemTaxPercent = parseFloat(row.querySelector('.tax-1').textContent) || 0;
 
-                const taxElement = row.querySelector('.tax-1');
-                const itemTaxPercent = taxElement ? parseFloat(taxElement.textContent) || 0 : 0;
+                // Get tax ID from hidden field
+                const taxIdField = row.querySelector('.item-tax-id');
+                const taxId = taxIdField ? parseInt(taxIdField.value) || 0 : 0;
 
-                // Always append all items, even if empty
-                formData.append(`items[${index}][item_id]`, itemId);
-                formData.append(`items[${index}][quantity]`, qty);
-                formData.append(`items[${index}][unit_price]`, unitPrice);
-                formData.append(`items[${index}][total_price]`, totalPrice);
-                formData.append(`items[${index}][discount_percent]`, itemDiscountPercent);
-                formData.append(`items[${index}][tax_id]`, itemTaxPercent);
+                if (itemId) {
+                    formData.append(`items[${index}][item_id]`, itemId);
+                    formData.append(`items[${index}][quantity]`, qty);
+                    formData.append(`items[${index}][unit_price]`, unitPrice);
+                    formData.append(`items[${index}][total_price]`, totalPrice);
+                    formData.append(`items[${index}][discount_percent]`, itemDiscountPercent);
+                    formData.append(`items[${index}][tax_percent]`, itemTaxPercent);
+                    formData.append(`items[${index}][tax_id]`, taxId);
+                }
             });
 
             // Log for debugging
@@ -558,7 +601,7 @@
                         <div class="debit-note-form-container">
                             <div class="mb-4" data-repeater-list="items">
                                 <!-- ======================================================================= -->
-                                <!-- FINAL MODIFIED ITEM ROW (DESCRIPTION TEXTAREA REMOVED) -->
+                                <!-- FIXED ITEM ROW WITH UPDATED TAX DROPDOWN -->
                                 <!-- ======================================================================= -->
                                 <div class="repeater-wrapper pt-0 pt-md-9" data-repeater-item>
                                     <div class="d-flex border rounded position-relative pe-0">
@@ -579,7 +622,6 @@
                                                         <option value="" disabled>No items available</option>
                                                     @endif
                                                 </select>
-                                                <!-- The item-description textarea is now completely removed from here -->
                                             </div>
                                             <!-- Selling Unit Price -->
                                             <div class="col-md-3 col-12 mb-md-0 mb-4">
@@ -639,17 +681,18 @@
                                                         <div class="col-12">
                                                             <label for="taxInput1" class="form-label">Item Level
                                                                 Tax</label>
-                                                            <select name="tax-1-input" id="taxInput1"
-                                                                class="form-select tax-select">
-                                                                <option value="0%" selected>0%</option>
+                                                            <select id="taxInput1" class="form-select tax-select">
+                                                                <option value="0" data-id="0" selected>0%</option>
                                                                 @if (count($taxes) > 0)
                                                                     @foreach ($taxes as $tax)
-                                                                        <option value="{{ $tax->id }}%">
+                                                                        <option value="{{ $tax->percentage }}"
+                                                                            data-id="{{ $tax->id }}">
                                                                             {{ $tax->name }} ({{ $tax->percentage }}%)
                                                                         </option>
                                                                     @endforeach
                                                                 @else
-                                                                    <option value="0%">No tax (0%)</option>
+                                                                    <option value="0" data-id="0">No tax (0%)
+                                                                    </option>
                                                                 @endif
                                                             </select>
                                                         </div>
@@ -666,7 +709,7 @@
                             </div>
                             <div class="row">
                                 <div class="col-12">
-                                    <button type="button" class="btn btn-sm btn-primary" data-repeater-create><i
+                                    <button type="button" class="btn btn-sm btn-primary" data-repeater-create"><i
                                             class="icon-base bx bx-plus icon-xs me-1_5"></i>Add Item</button>
                                 </div>
                             </div>

@@ -11,7 +11,7 @@ class BillingCreditNoteItem extends Model
     use HasFactory;
 
     protected $table = 'billing_credit_note_items';
-    
+
     protected $fillable = [
         'document_id',
         'item_id',

@@ -47,12 +47,14 @@
             <!-- Password Fields -->
             <div class="mb-6">
                 <label class="form-label" for="password">Password</label>
-                <input type="password" class="form-control" id="password" name="password" placeholder="Enter Password" />
+                <input type="password" class="form-control" id="password" name="password"
+                    placeholder="Enter Password" />
             </div>
 
             <div class="mb-6">
                 <label class="form-label" for="password_confirmation">Confirm Password</label>
-                <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" placeholder="Confirm Password" />
+                <input type="password" class="form-control" id="password_confirmation" name="password_confirmation"
+                    placeholder="Confirm Password" />
             </div>
 
             {{-- 

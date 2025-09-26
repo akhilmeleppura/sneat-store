@@ -8,13 +8,14 @@ use App\Models\Customers\Customer;
 use Modules\Billing\App\Models\BillingInvoiceItem;
 use Modules\Billing\App\Models\BillingDebitNote;
 use Modules\Billing\App\Models\BillingCreditNote;
+use Modules\General\App\Models\DocumentTemplate;
 
 class BillingInvoice extends Model
 {
     use HasFactory;
-    
+
     protected $table = 'billing_invoices';
-    
+
     protected $fillable = [
         'document_prefix',
         'document_number',
@@ -26,58 +27,58 @@ class BillingInvoice extends Model
         'document_discount_rate',
         'document_discount_amount',
         'payment_status',
-        'document_tax_id'
+        'document_tax_id',
     ];
-    
+
     protected $casts = [
         'issue_date' => 'datetime',
-        'due_date' => 'datetime',
+        'due_date'   => 'datetime',
     ];
-    
+
     public $timestamps = true;
-    
+
     /**
-     * Relationship: Invoice belongs to a customer
+     * Belongs to customer
      */
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customer_id');
     }
-    
+
     /**
-     * Relationship: Invoice has many items
+     * Has many items (with billingItem relation inside)
      */
     public function items()
     {
         return $this->hasMany(BillingInvoiceItem::class, 'document_id');
     }
-    
+
     /**
-     * Relationship: Invoice has many debit notes
+     * Has many debit notes
      */
     public function debitNotes()
     {
         return $this->hasMany(BillingDebitNote::class, 'invoice_id');
     }
-    
+
     /**
-     * Relationship: Invoice has many credit notes
+     * Has many credit notes
      */
     public function creditNotes()
     {
         return $this->hasMany(BillingCreditNote::class, 'invoice_id');
     }
-    
+
     /**
-     * Relationship: Invoice belongs to a payment status
+     * Belongs to payment status
      */
     public function status()
     {
         return $this->belongsTo(BillingPaymentStatus::class, 'payment_status', 'value');
     }
-    
+
     /**
-     * Accessor for payment status label
+     * Payment status label accessor
      */
     public function getPaymentStatusLabelAttribute()
     {
@@ -88,9 +89,9 @@ class BillingInvoice extends Model
             default => 'Unknown',
         };
     }
-    
+
     /**
-     * Accessor for discount type label
+     * Discount type label accessor
      */
     public function getDiscountTypeLabelAttribute()
     {
@@ -99,5 +100,13 @@ class BillingInvoice extends Model
             2 => 'Fixed Amount',
             default => 'None',
         };
+    }
+
+    /**
+     * Belongs to document template
+     */
+    public function template()
+    {
+        return $this->belongsTo(DocumentTemplate::class, 'template_id');
     }
 }

@@ -8,16 +8,10 @@ use App\Models\Taxes\Tax;
 use Modules\General\App\Models\Company;
 use Modules\General\App\Models\Branch;
 
-
-// use Modules\Billing\Database\Factories\BillingInvoiceItemFactory;
-
 class BillingInvoiceItem extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $table = 'billing_invoices_items';
 
     protected $fillable = [
@@ -37,15 +31,11 @@ class BillingInvoiceItem extends Model
     public $timestamps = true;
 
     protected $casts = [
-        'taxes' => 'array', // JSON column will be cast to array automatically
+        'taxes' => 'array',
     ];
 
     /**
-     * Relationship: An item belongs to an invoice
-     */
-
-    /**
-     * Relationship: Belongs to a company
+     * Belongs to company
      */
     public function company()
     {
@@ -53,25 +43,34 @@ class BillingInvoiceItem extends Model
     }
 
     /**
-     * Relationship: Belongs to a branch
+     * Belongs to branch
      */
     public function branch()
     {
         return $this->belongsTo(Branch::class, 'branch_id');
     }
-    
+
+    /**
+     * Access taxes (stored as JSON IDs)
+     */
     public function getTaxesAttribute($value)
     {
         return Tax::whereIn('id', json_decode($value, true))->get();
     }
-    
-public function invoice()
-{
-    return $this->belongsTo(BillingInvoice::class, 'document_id', 'id');
-}
 
-public function item()
-{
-    return $this->belongsTo(BillingItem::class, 'item_id', 'id');
-}
+    /**
+     * Belongs to invoice
+     */
+    public function invoice()
+    {
+        return $this->belongsTo(BillingInvoice::class, 'document_id', 'id');
+    }
+
+    /**
+     * Belongs to billing item
+     */
+    public function billingItem()
+    {
+        return $this->belongsTo(BillingItem::class, 'item_id', 'id');
+    }
 }

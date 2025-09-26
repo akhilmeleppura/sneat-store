@@ -18,8 +18,8 @@ class PrefixController extends Controller
      */
     public function index()
     {
-              $currentRoute = request()->route()->getName();
-    $menu = MenuService::getMenu($currentRoute);
+        $currentRoute = request()->route()->getName();
+        $menu = MenuService::getMenu($currentRoute);
 
         return view('accounting::accounting.prefix', compact('menu'));
     }
@@ -42,21 +42,20 @@ class PrefixController extends Controller
      */
     public function store(Request $request)
     {
-        
-    try {
-        $validated = $request->validate([
-            'journal_name' => 'required|string|unique:accounting_prefixes,journal_name|max:255',
-        ]);
 
-        Prefix::create($validated);
+        try {
+            $validated = $request->validate([
+                'journal_name' => 'required|string|unique:accounting_prefixes,journal_name|max:255',
+            ]);
 
-        return Reply::success('Journal prefix added successfully.');
+            Prefix::create($validated);
 
-    } catch (\Exception $e) {
-        report($e);
-        return Reply::error('Failed to add prefix. ' . $e->getMessage(), 500);
+            return Reply::success('Journal prefix added successfully.');
+        } catch (\Exception $e) {
+            report($e);
+            return Reply::error('Failed to add prefix. ' . $e->getMessage(), 500);
+        }
     }
-}
 
     /**
      * Display the specified resource.

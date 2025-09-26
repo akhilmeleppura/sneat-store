@@ -15,6 +15,8 @@ use App\Models\Taxes\Tax;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\HS\Reply;
+use Modules\General\App\Models\DocumentTemplate;
+use Modules\General\App\Models\Template;
 
 class DebitNoteController extends Controller
 {
@@ -226,7 +228,18 @@ class DebitNoteController extends Controller
             }
         }
 
-        return view('billing::debit-notes.show', compact('debitNote', 'branchLogo'));
+        $branchId = $debitNote->items->first()?->branch_id;
+
+        // Fetch the template directly from DocumentTemplate
+        $template = DocumentTemplate::where('company_id', auth()->user()->company_id)
+            ->where('branch_id', $branchId)
+            ->where('type', 'invoice')
+            ->first();
+
+        // Use the path from the fetched template, fallback to default
+        $templateView = Template::find($template?->template_id)?->path ?? 'HS.Templates.standard_header_footer';
+
+        return view('billing::debit-notes.show', compact('debitNote', 'branchLogo', 'templateView', 'template'));
     }
 
     public function edit($id)

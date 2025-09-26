@@ -9,9 +9,9 @@
 @section('vendor-script')
     @vite(['resources/assets/vendor/libs/flatpickr/flatpickr.js', 'resources/assets/vendor/libs/cleave-zen/cleave-zen.js', 'resources/assets/vendor/libs/jquery-repeater/jquery-repeater.js'])
 @endsection
+
 @section('page-script')
     @vite(['resources/assets/js/offcanvas-send-invoice.js', 'resources/assets/js/app-invoice-add.js'])
-    <!-- Include SweetAlert if not already included -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
@@ -33,7 +33,6 @@
                 dateFormat: "m/d/Y",
                 defaultDate: "{{ $invoice->due_date ? $invoice->due_date->format('m/d/Y') : '' }}",
             });
-            
             // Initialize select fields and calculations after a delay to ensure everything is loaded.
             setTimeout(() => {
                 // Set client selection and trigger change event to show details
@@ -41,30 +40,30 @@
                     const clientSelect = document.getElementById('clientSelect');
                     clientSelect.value = "{{ $invoice->customer_id }}";
                     // Manually trigger the change event to populate client details
-                    const event = new Event('change', { bubbles: true });
+                    const event = new Event('change', {
+                        bubbles: true
+                    });
                     clientSelect.dispatchEvent(event);
                 }
-                
                 // Set document-level tax
                 if (document.getElementById('tax')) {
                     document.getElementById('tax').value = "{{ $invoice->document_tax_id ?? 0 }}";
                 }
-                
                 // Set document-level discount
-                document.getElementById('discount-type').value = "{{ $invoice->document_discount_type == 1 ? '%' : 'Amount' }}";
-                document.getElementById('discount').value = "{{ $invoice->document_discount_rate > 0 ? $invoice->document_discount_rate : $invoice->document_discount_amount }}";
-                
+                document.getElementById('discount-type').value =
+                    "{{ $invoice->document_discount_type == 1 ? '%' : 'Amount' }}";
+                document.getElementById('discount').value =
+                    "{{ $invoice->document_discount_rate > 0 ? $invoice->document_discount_rate : $invoice->document_discount_amount }}";
                 // Initialize each existing item's discount and tax values
                 document.querySelectorAll('.repeater-wrapper').forEach(wrapper => {
                     // Get the discount and tax values from the display spans
-                    const discountPercent = parseFloat(wrapper.querySelector('.discount').textContent) || 0;
-                    
+                    const discountPercent = parseFloat(wrapper.querySelector('.discount')
+                        .textContent) || 0;
                     // Set the discount input value in the dropdown
                     const discountInput = wrapper.querySelector('.discountInput');
                     if (discountInput) {
                         discountInput.value = discountPercent;
                     }
-                    
                     // Set the tax select value in the dropdown
                     const taxSelect = wrapper.querySelector('.taxInput1');
                     if (taxSelect) {
@@ -74,17 +73,13 @@
                             taxSelect.value = taxIdField.value;
                         }
                     }
-                    
                     // Recalculate the item total to ensure all values are properly displayed
                     calculateItemTotal(wrapper);
                 });
-                
                 calculateSubtotal();
-                
                 // Setup repeater to handle new items with default values
                 setupRepeaterDefaults();
             }, 200);
-            
             // =========================================================================================
             // EVENT LISTENER FOR 'APPLY CHANGES' (ITEM-LEVEL DISCOUNT/TAX)
             // =========================================================================================
@@ -98,17 +93,14 @@
                     const taxSelect = dropdown.querySelector('.taxInput1');
                     const taxId = taxSelect.value;
                     const taxText = taxSelect.options[taxSelect.selectedIndex].text;
-                    
                     // Update the display spans
                     repeaterWrapper.querySelector('.discount').textContent = discountValue + '%';
                     repeaterWrapper.querySelector('.tax-1').textContent = taxText;
-                    
                     // Update the hidden tax ID field
                     const taxIdField = repeaterWrapper.querySelector('input[name="tax_id"]');
                     if (taxIdField) {
                         taxIdField.value = taxId;
                     }
-                    
                     calculateItemTotal(repeaterWrapper);
                     calculateSubtotal();
                     const dropdownToggle = repeaterWrapper.querySelector('[data-bs-toggle="dropdown"]');
@@ -116,7 +108,6 @@
                     if (bsDropdown) bsDropdown.hide();
                 }
             });
-            
             // Function to set up default values for new items added via repeater
             function setupRepeaterDefaults() {
                 // Listen for new items being added
@@ -129,7 +120,8 @@
                                 for (let i = 0; i < mutation.addedNodes.length; i++) {
                                     const node = mutation.addedNodes[i];
                                     // Check if the added node is a repeater wrapper
-                                    if (node.classList && node.classList.contains('repeater-wrapper')) {
+                                    if (node.classList && node.classList.contains(
+                                            'repeater-wrapper')) {
                                         initializeNewItem(node);
                                     }
                                     // Check if the added node contains a repeater wrapper
@@ -143,12 +135,12 @@
                             }
                         });
                     });
-                    
                     // Start observing the repeater list for child list changes
-                    observer.observe(repeaterList, { childList: true });
+                    observer.observe(repeaterList, {
+                        childList: true
+                    });
                 }
             }
-            
             // Function to initialize a new item with default values
             function initializeNewItem(wrapper) {
                 // Set default discount to 0%
@@ -156,25 +148,21 @@
                 if (discountDisplay) {
                     discountDisplay.textContent = '0%';
                 }
-                
                 // Set default tax to 0%
                 const taxDisplay = wrapper.querySelector('.tax-1');
                 if (taxDisplay) {
                     taxDisplay.textContent = '0%';
                 }
-                
                 // Set discount input to 0
                 const discountInput = wrapper.querySelector('.discountInput');
                 if (discountInput) {
                     discountInput.value = 0;
                 }
-                
                 // Set tax select to 0%
                 const taxSelect = wrapper.querySelector('.taxInput1');
                 if (taxSelect) {
                     taxSelect.value = '0';
                 }
-                
                 // Add hidden tax_id field if it doesn't exist
                 if (!wrapper.querySelector('input[name="tax_id"]')) {
                     const hiddenTaxId = document.createElement('input');
@@ -183,64 +171,69 @@
                     hiddenTaxId.value = '0';
                     wrapper.querySelector('.row').appendChild(hiddenTaxId);
                 }
-                
                 // Calculate the item total
                 calculateItemTotal(wrapper);
             }
         });
-        
+        // Calculate item total including item-level discount and tax
         // Calculate item total including item-level discount and tax
         function calculateItemTotal(row) {
             const qty = parseFloat(row.querySelector('.quantity').value) || 0;
             const unitPrice = parseFloat(row.querySelector('.selling-unit-price').value) || 0;
             const discountPercent = parseFloat(row.querySelector('.discount').textContent) || 0;
-            
-            // Get tax percentage from the selected option in the tax dropdown
+
             const taxSelect = row.querySelector('.taxInput1');
             let taxPercent = 0;
+            let taxLabel = '0%';
             if (taxSelect && taxSelect.value && taxSelect.value !== '0') {
                 const selectedOption = taxSelect.options[taxSelect.selectedIndex];
-                // Extract percentage from the text (e.g., "VAT (10%)" -> 10)
-                const match = selectedOption.text.match(/(\d+(?:\.\d+)?)%/);
-                if (match) {
-                    taxPercent = parseFloat(match[1]);
-                }
+                taxPercent = parseFloat(selectedOption.getAttribute('data-rate')) || 0;
+
+                // ✅ Fix duplication: take only tax name, then append formatted %
+                const taxName = selectedOption.text.split('(')[0].trim();
+                taxLabel = `${taxName} (${taxPercent.toFixed(2)}%)`;
             }
-            
+
             const baseAmount = qty * unitPrice;
             const discountAmount = baseAmount * (discountPercent / 100);
             const taxableAmount = baseAmount - discountAmount;
             const taxAmount = taxableAmount * (taxPercent / 100);
             const totalAmount = taxableAmount + taxAmount;
-            
+
+            // Update UI values
             row.querySelector('.item-discount-amount').textContent = '$' + discountAmount.toFixed(2);
             row.querySelector('.item-tax-amount').textContent = '$' + taxAmount.toFixed(2);
             row.querySelector('.total-price').value = totalAmount.toFixed(2);
+
+            // 🔹 Update the "Tax:" label span in the row
+            const taxDisplay = row.querySelector('.tax-1');
+            if (taxDisplay) {
+                taxDisplay.textContent = taxLabel;
+            }
         }
-        
+
+
         document.addEventListener('change', function(e) {
             // Handle item selection change
             if (e.target.classList.contains('item-details')) {
                 const selected = e.target.options[e.target.selectedIndex];
                 const wrapper = e.target.closest('.repeater-wrapper');
                 if (selected.value) {
-                    wrapper.querySelector('.selling-unit-price').value = (parseFloat(selected.getAttribute('data-price')) || 0).toFixed(2);
+                    wrapper.querySelector('.selling-unit-price').value = (parseFloat(selected.getAttribute(
+                        'data-price')) || 0).toFixed(2);
                 } else {
                     wrapper.querySelector('.selling-unit-price').value = '0.00';
                 }
                 calculateItemTotal(wrapper);
                 calculateSubtotal();
             }
-            
             // Handle client selection change
             if (e.target.id === 'clientSelect') {
                 const selected = e.target.options[e.target.selectedIndex];
                 const client_id = document.getElementById('client_id');
-                
                 if (selected.value) {
                     // Update hidden client_id field
                     client_id.value = selected.value;
-                    
                     // Get client details from data attributes
                     const company = selected.getAttribute('data-company') || selected.textContent;
                     const address = selected.getAttribute('data-address') || '';
@@ -249,10 +242,8 @@
                     const zip = selected.getAttribute('data-zip') || '';
                     const phone = selected.getAttribute('data-phone') || '';
                     const email = selected.getAttribute('data-email') || '';
-                    
                     // Update client details display
                     document.getElementById('clientCompany').textContent = company;
-                    
                     // Format full address
                     let fullAddress = '';
                     if (address) fullAddress += address;
@@ -272,13 +263,11 @@
                     document.getElementById('clientEmail').textContent = '';
                 }
             }
-            
             // Recalculate if document-level discount or tax changes
             if (['discount-type', 'tax'].includes(e.target.id)) {
                 calculateSubtotal();
             }
         });
-        
         document.addEventListener("input", function(e) {
             // Recalculate if quantity, price, or document discount input changes
             if (e.target.classList.contains('quantity') || e.target.classList.contains('selling-unit-price')) {
@@ -289,26 +278,30 @@
                 calculateSubtotal();
             }
         });
-        
         // Calculate grand totals for the entire invoice
         function calculateSubtotal() {
-            let subtotal = 0, itemLevelDiscountTotal = 0, itemLevelTaxTotal = 0;
+            let subtotal = 0,
+                itemLevelDiscountTotal = 0,
+                itemLevelTaxTotal = 0;
             document.querySelectorAll('.repeater-wrapper').forEach(row => {
-                subtotal += (parseFloat(row.querySelector('.selling-unit-price')?.value) || 0) * (parseFloat(row.querySelector('.quantity')?.value) || 0);
-                itemLevelDiscountTotal += parseFloat(row.querySelector('.item-discount-amount')?.textContent.replace('$', '') || 0);
-                itemLevelTaxTotal += parseFloat(row.querySelector('.item-tax-amount')?.textContent.replace('$', '') || 0);
+                subtotal += (parseFloat(row.querySelector('.selling-unit-price')?.value) || 0) * (parseFloat(row
+                    .querySelector('.quantity')?.value) || 0);
+                itemLevelDiscountTotal += parseFloat(row.querySelector('.item-discount-amount')?.textContent
+                    .replace('$', '') || 0);
+                itemLevelTaxTotal += parseFloat(row.querySelector('.item-tax-amount')?.textContent.replace('$',
+                    '') || 0);
             });
-            
             document.getElementById("subtotal-display").textContent = '$' + subtotal.toFixed(2);
-            document.getElementById("item-level-discount-total-display").textContent = '-$' + itemLevelDiscountTotal.toFixed(2);
+            document.getElementById("item-level-discount-total-display").textContent = '-$' + itemLevelDiscountTotal
+                .toFixed(2);
             document.getElementById("item-level-tax-total-display").textContent = '+$' + itemLevelTaxTotal.toFixed(2);
-            
             const subtotalAfterItemAdjustments = subtotal - itemLevelDiscountTotal + itemLevelTaxTotal;
-            document.getElementById("subtotal-after-item-adjustments-display").textContent = '$' + subtotalAfterItemAdjustments.toFixed(2);
-            
+            document.getElementById("subtotal-after-item-adjustments-display").textContent = '$' +
+                subtotalAfterItemAdjustments.toFixed(2);
             const discountValue = parseFloat(document.getElementById("discount")?.value || 0);
             const discountType = document.getElementById("discount-type")?.value || "%";
-            const discountAmount = (discountType === "%") ? (subtotalAfterItemAdjustments * discountValue) / 100 : discountValue;
+            const discountAmount = (discountType === "%") ? (subtotalAfterItemAdjustments * discountValue) / 100 :
+                discountValue;
             document.getElementById("discount-display").textContent = '-$' + discountAmount.toFixed(2);
             const taxableAmount = Math.max(0, subtotalAfterItemAdjustments - discountAmount);
             document.getElementById("taxable-amount-display").textContent = '$' + taxableAmount.toFixed(2);
@@ -317,10 +310,8 @@
             const taxRate = parseFloat(taxSelect.options[taxSelect.selectedIndex]?.getAttribute('data-rate') || 0);
             const taxAmount = taxableAmount * (taxRate / 100);
             document.getElementById("tax-amount-display").textContent = '+$' + taxAmount.toFixed(2);
-            
             const grandTotal = taxableAmount + taxAmount;
             document.getElementById("grand-total").textContent = '$' + grandTotal.toFixed(2);
-            
             // Update hidden fields
             document.getElementById("sub_total").value = subtotal.toFixed(2);
             document.getElementById("document_discount_amount").value = discountAmount.toFixed(2);
@@ -330,47 +321,53 @@
             document.getElementById("document_discount_type").value = discountType === "%" ? 1 : 2;
             document.getElementById("document_discount_rate").value = discountValue;
         }
-        
         // Function to handle form submission for updating the invoice
         function saveInvoice() {
             if (!document.getElementById('clientSelect').value) {
-                return Swal.fire({ 
-                    icon: 'warning', 
-                    title: 'Validation Error', 
+                return Swal.fire({
+                    icon: 'warning',
+                    title: 'Validation Error',
                     text: 'Please select a client.',
                     confirmButtonColor: '#3085d6',
                 });
             }
-            
             if (!Array.from(document.querySelectorAll('.item-details')).some(item => item.value)) {
-                 return Swal.fire({ 
-                    icon: 'warning', 
-                    title: 'Validation Error', 
+                return Swal.fire({
+                    icon: 'warning',
+                    title: 'Validation Error',
                     text: 'Please add at least one item.',
                     confirmButtonColor: '#3085d6',
                 });
             }
-            
             const saveButton = document.getElementById('saveInvoiceBtn');
             saveButton.disabled = true;
             saveButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Updating...';
-            
             let formData = new FormData(document.getElementById('invoiceForm'));
             formData.append('_method', 'PUT'); // Specify PUT method for update
-            
-            let issueDate = document.querySelector('.invoice-date').value;
-            if(issueDate) formData.set('issue_date', issueDate.split('/').reverse().join('-'));
+            // =========================================================================
+            // START: *** THIS IS THE CORRECTED CODE BLOCK ***
+            // =========================================================================
+            let issueDate = document.querySelector('.invoice-date').value; // e.g., "09/15/2025"
+            if (issueDate) {
+                const parts = issueDate.split('/'); // -> ['09', '15', '2025']
+                const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`; // -> "2025-09-15"
+                formData.set('issue_date', formattedDate);
+            }
             let dueDate = document.querySelector('.due-date').value;
-            if(dueDate) formData.set('due_date', dueDate.split('/').reverse().join('-'));
-            
+            if (dueDate) {
+                const parts = dueDate.split('/');
+                const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
+                formData.set('due_date', formattedDate);
+            }
+            // =========================================================================
+            // END: *** THIS IS THE CORRECTED CODE BLOCK ***
+            // =========================================================================
             formData.set('invoice_number', document.getElementById('invoiceId').value);
-            
             // Clear previous items to avoid confusion on the backend
-            formData.forEach((value, key) => { 
-                if (key.startsWith('items[')) formData.delete(key); 
+            formData.forEach((value, key) => {
+                if (key.startsWith('items[')) formData.delete(key);
                 if (key.startsWith('existing_items[')) formData.delete(key);
             });
-            
             // Collect all items (both existing and new) in a unified format
             document.querySelectorAll('.repeater-wrapper').forEach((row, index) => {
                 const itemId = row.querySelector('.item-details')?.value;
@@ -379,11 +376,14 @@
                     if (itemDbId) {
                         formData.append(`existing_items[${index}][id]`, itemDbId);
                         formData.append(`existing_items[${index}][item_id]`, itemId);
-                        formData.append(`existing_items[${index}][quantity]`, row.querySelector('.quantity')?.value || 0);
-                        formData.append(`existing_items[${index}][unit_price]`, row.querySelector('.selling-unit-price')?.value || 0);
-                        formData.append(`existing_items[${index}][total_price]`, row.querySelector('.total-price')?.value || 0);
-                        formData.append(`existing_items[${index}][discount_percent]`, parseFloat(row.querySelector('.discount').textContent) || 0);
-                        
+                        formData.append(`existing_items[${index}][quantity]`, row.querySelector('.quantity')
+                            ?.value || 0);
+                        formData.append(`existing_items[${index}][unit_price]`, row.querySelector(
+                            '.selling-unit-price')?.value || 0);
+                        formData.append(`existing_items[${index}][total_price]`, row.querySelector('.total-price')
+                            ?.value || 0);
+                        formData.append(`existing_items[${index}][discount_percent]`, parseFloat(row.querySelector(
+                            '.discount').textContent) || 0);
                         // Get tax ID and percentage
                         const taxSelect = row.querySelector('.taxInput1');
                         const taxId = taxSelect.value;
@@ -392,10 +392,12 @@
                         // New item
                         formData.append(`items[${index}][item_id]`, itemId);
                         formData.append(`items[${index}][quantity]`, row.querySelector('.quantity')?.value || 0);
-                        formData.append(`items[${index}][unit_price]`, row.querySelector('.selling-unit-price')?.value || 0);
-                        formData.append(`items[${index}][total_price]`, row.querySelector('.total-price')?.value || 0);
-                        formData.append(`items[${index}][discount_percent]`, parseFloat(row.querySelector('.discount').textContent) || 0);
-                        
+                        formData.append(`items[${index}][unit_price]`, row.querySelector('.selling-unit-price')
+                            ?.value || 0);
+                        formData.append(`items[${index}][total_price]`, row.querySelector('.total-price')?.value ||
+                            0);
+                        formData.append(`items[${index}][discount_percent]`, parseFloat(row.querySelector(
+                            '.discount').textContent) || 0);
                         // Get tax ID and percentage
                         const taxSelect = row.querySelector('.taxInput1');
                         const taxId = taxSelect.value;
@@ -403,47 +405,46 @@
                     }
                 }
             });
-            
             fetch("{{ route('billing.invoices.update', $invoice->id) }}", {
-                method: 'POST',
-                headers: { 
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}', 
-                    'Accept': 'application/json' 
-                },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.message || 'Server error');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                Swal.fire({ 
-                    icon: 'success', 
-                    title: 'Success!', 
-                    text: data.message || "Invoice updated successfully.",
-                    confirmButtonColor: '#3085d6',
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
                 })
-                .then(() => {
-                    window.location.href = "{{ route('accounting.billings.index') }}";
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || 'Server error');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: data.message || "Invoice updated successfully.",
+                            confirmButtonColor: '#3085d6',
+                        })
+                        .then(() => {
+                            window.location.href = "{{ route('accounting.billings.index') }}";
+                        });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: error.message || 'An error occurred while updating the invoice.',
+                        confirmButtonColor: '#3085d6',
+                    });
+                })
+                .finally(() => {
+                    saveButton.disabled = false;
+                    saveButton.innerHTML = 'Update';
                 });
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({ 
-                    icon: 'error', 
-                    title: 'Error!', 
-                    text: error.message || 'An error occurred while updating the invoice.',
-                    confirmButtonColor: '#3085d6',
-                });
-            })
-            .finally(() => {
-                saveButton.disabled = false;
-                saveButton.innerHTML = 'Update';
-            });
         }
     </script>
 @endsection
@@ -565,7 +566,8 @@
                                             <div class="row w-100 p-6 g-6">
                                                 <input type="hidden" name="id" value="{{ $invoiceItem->id }}" />
                                                 <!-- Hidden field for tax_id -->
-                                                <input type="hidden" name="tax_id" value="{{ $invoiceItem->tax_id ?? 0 }}" />
+                                                <input type="hidden" name="tax_id"
+                                                    value="{{ $invoiceItem->tax_id ?? 0 }}" />
                                                 <div class="col-md-5 col-12 mb-md-0 mb-4">
                                                     <p class="h6 repeater-title">Item</p>
                                                     <select class="form-select item-details" name="item_id">
@@ -581,20 +583,22 @@
                                                 </div>
                                                 <div class="col-md-2 col-12 mb-md-0 mb-4">
                                                     <p class="h6 repeater-title">Selling Unit Price</p>
-                                                    <input type="number"
-                                                        class="form-control selling-unit-price" name="unit_price"
-                                                        placeholder="999" value="{{ number_format($invoiceItem->selling_unit_price, 2, '.', '') }}" step="0.01"
-                                                        min="0">
+                                                    <input type="number" class="form-control selling-unit-price"
+                                                        name="unit_price" placeholder="999"
+                                                        value="{{ number_format($invoiceItem->selling_unit_price, 2, '.', '') }}"
+                                                        step="0.01" min="0">
                                                     <div class="text-heading mt-2">
                                                         <div class="mb-1"><small class="text-muted">Discount:</small>
-                                                            <span class="discount me-2">{{ $invoiceItem->discount_rate ?? 0 }}%</span>
+                                                            <span
+                                                                class="discount me-2">{{ $invoiceItem->discount_rate ?? 0 }}%</span>
                                                             <small class="text-muted">Amt:</small> <span
                                                                 class="item-discount-amount text-success fw-medium">$0.00</span>
                                                         </div>
                                                         <div class="mb-1"><small class="text-muted">Tax:</small>
                                                             <span class="tax-1 me-2">
-                                                                @if($invoiceItem->tax_id)
-                                                                    {{ optional($invoiceItem->tax)->name }} ({{ optional($invoiceItem->tax)->percentage }}%)
+                                                                @if ($invoiceItem->tax_id)
+                                                                    {{ optional($invoiceItem->tax)->name }}
+                                                                    ({{ optional($invoiceItem->tax)->percentage }}%)
                                                                 @else
                                                                     0%
                                                                 @endif
@@ -616,23 +620,32 @@
                                                         name="total_price" placeholder="0.00" readonly>
                                                 </div>
                                             </div>
-                                            <div class="d-flex flex-column align-items-center justify-content-between border-start p-2">
-                                                <i class="icon-base bx bx-x icon-lg cursor-pointer" data-repeater-delete></i>
+                                            <div
+                                                class="d-flex flex-column align-items-center justify-content-between border-start p-2">
+                                                <i class="icon-base bx bx-x icon-lg cursor-pointer"
+                                                    data-repeater-delete></i>
                                                 <div class="dropdown">
-                                                    <i class="icon-base bx bx-cog icon-lg cursor-pointer" role="button" data-bs-toggle="dropdown" data-bs-auto-close="false"></i>
+                                                    <i class="icon-base bx bx-cog icon-lg cursor-pointer" role="button"
+                                                        data-bs-toggle="dropdown" data-bs-auto-close="false"></i>
                                                     <div class="dropdown-menu dropdown-menu-end w-px-300 p-4">
                                                         <div class="row g-3">
                                                             <div class="col-12"><label class="form-label">Discount
-                                                                    (%)</label><input type="number"
+                                                                    (%)
+                                                                </label><input type="number"
                                                                     class="form-control discountInput"
                                                                     value="{{ $invoiceItem->discount_rate ?? 0 }}"
                                                                     min="0" max="100" /></div>
                                                             <div class="col-12"><label
                                                                     class="form-label">Tax</label><select
                                                                     class="form-select taxInput1">
-                                                                    <option value="0" {{ is_null($invoiceItem->tax_id) || $invoiceItem->tax_id == 0 ? 'selected' : '' }}>No Tax (0%)</option>
+                                                                    <option value="0"
+                                                                        {{ is_null($invoiceItem->tax_id) || $invoiceItem->tax_id == 0 ? 'selected' : '' }}>
+                                                                        No Tax (0%)</option>
                                                                     @foreach ($taxes as $tax)
-                                                                        <option value="{{ $tax->id }}" {{ $invoiceItem->tax_id == $tax->id ? 'selected' : '' }}>
+                                                                        <!-- FIXED: Added data-rate attribute -->
+                                                                        <option value="{{ $tax->id }}"
+                                                                            data-rate="{{ $tax->percentage }}"
+                                                                            {{ $invoiceItem->tax_id == $tax->id ? 'selected' : '' }}>
                                                                             {{ $tax->name }} ({{ $tax->percentage }}%)
                                                                         </option>
                                                                     @endforeach
@@ -686,12 +699,15 @@
                                 <div class="d-flex justify-content-between mb-2">
                                     <div class="d-flex align-items-center w-px-100"><span>Discount:</span></div>
                                     <div class="d-flex align-items-center">
-                                        <input type="number" id="discount" class="form-control form-control-sm me-2" value="0" style="width: 80px;" min="0">
-                                        <select class="form-select form-select-sm me-2" style="width: 70px;" id="discount-type">
+                                        <input type="number" id="discount" class="form-control form-control-sm me-2"
+                                            value="0" style="width: 80px;" min="0">
+                                        <select class="form-select form-select-sm me-2" style="width: 70px;"
+                                            id="discount-type">
                                             <option value="%" selected>%</option>
                                             <option value="Amount">$</option>
                                         </select>
-                                        <span class="fw-medium text-heading" id="discount-display" style="width: 60px;">-$0.00</span>
+                                        <span class="fw-medium text-heading" id="discount-display"
+                                            style="width: 60px;">-$0.00</span>
                                     </div>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
@@ -701,7 +717,8 @@
                                 <div class="d-flex justify-content-between mb-2">
                                     <div class="d-flex align-items-center w-px-100"><span>Tax:</span></div>
                                     <div class="d-flex align-items-center">
-                                        <select id="tax" class="form-select form-control-sm me-2" style="width: 120px;">
+                                        <select id="tax" class="form-select form-control-sm me-2"
+                                            style="width: 120px;">
                                             <option value="0" data-rate="0">No Tax (0%)</option>
                                             @foreach ($taxes as $tax)
                                                 <option value="{{ $tax->id }}" data-rate="{{ $tax->percentage }}"
@@ -709,7 +726,8 @@
                                                     {{ $tax->name }} ({{ $tax->percentage }}%)</option>
                                             @endforeach
                                         </select>
-                                        <span class="fw-medium text-heading" id="tax-amount-display" style="width: 60px;">+$0.00</span>
+                                        <span class="fw-medium text-heading" id="tax-amount-display"
+                                            style="width: 60px;">+$0.00</span>
                                     </div>
                                 </div>
                                 <hr class="my-2" />
@@ -728,11 +746,15 @@
         <div class="col-lg-3 col-12 invoice-actions">
             <div class="card mb-6">
                 <div class="card-body">
-                    <button class="btn btn-primary d-grid w-100 mb-4" data-bs-toggle="offcanvas" data-bs-target="#sendInvoiceOffcanvas">
-                        <span class="d-flex align-items-center justify-content-center text-nowrap"><i class="icon-base bx bx-paper-plane icon-xs me-2"></i>Send Invoice</span>
+                    <button class="btn btn-primary d-grid w-100 mb-4" data-bs-toggle="offcanvas"
+                        data-bs-target="#sendInvoiceOffcanvas">
+                        <span class="d-flex align-items-center justify-content-center text-nowrap"><i
+                                class="icon-base bx bx-paper-plane icon-xs me-2"></i>Send Invoice</span>
                     </button>
-                    <button type="button" class="btn btn-label-secondary d-grid w-100 mb-4" onclick="previewInvoice()">Preview</button>
-                    <button type="button" id="saveInvoiceBtn" class="btn btn-label-secondary d-grid w-100" onclick="saveInvoice()">Update</button>
+                    <button type="button" class="btn btn-label-secondary d-grid w-100 mb-4"
+                        onclick="previewInvoice()">Preview</button>
+                    <button type="button" id="saveInvoiceBtn" class="btn btn-label-secondary d-grid w-100"
+                        onclick="saveInvoice()">Update</button>
                 </div>
             </div>
         </div>

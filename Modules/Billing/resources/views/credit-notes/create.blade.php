@@ -41,33 +41,68 @@
             // Initialize calculations
             calculateSubtotal();
             // =========================================================================================
-            // MODIFIED AND IMPROVED EVENT LISTENER FOR 'APPLY CHANGES'
+            // FIXED AND IMPROVED EVENT LISTENER FOR 'APPLY CHANGES'
             // =========================================================================================
             document.addEventListener('click', function(e) {
                 if (e.target.classList.contains('btn-apply-changes')) {
                     e.preventDefault();
                     e.stopPropagation();
+
                     const dropdown = e.target.closest('.dropdown-menu');
                     const repeaterWrapper = dropdown.closest('.repeater-wrapper');
+
                     // 1. Get the new discount and tax values from the dropdown inputs
                     const discountValue = parseFloat(dropdown.querySelector('#discountInput').value) || 0;
-                    const taxValue = dropdown.querySelector('#taxInput1').value || '0%'; // e.g., "5%"
+                    const taxSelect = dropdown.querySelector('#taxInput1');
+                    const taxValue = taxSelect.value; // e.g., "10%"
+                    const selectedOption = taxSelect.options[taxSelect.selectedIndex];
+
+                    // Extract tax percentage and ID from the selected option
+                    let taxPercent = 0;
+                    let taxId = 0;
+
+                    if (selectedOption) {
+                        // Extract percentage from the text (e.g., "VAT (10%)" -> 10)
+                        const match = selectedOption.text.match(/(\d+(?:\.\d+)?)%/);
+                        if (match) {
+                            taxPercent = parseFloat(match[1]);
+                        }
+
+                        // Get the tax ID from the data attribute if available
+                        taxId = selectedOption.getAttribute('data-id') || 0;
+                    }
+
                     // 2. Update the percentage text displays in the main item row
                     const discountDisplay = repeaterWrapper.querySelector('.discount');
                     discountDisplay.textContent = discountValue + '%';
+
                     const taxDisplay = repeaterWrapper.querySelector('.tax-1');
-                    taxDisplay.textContent = taxValue;
+                    taxDisplay.textContent = taxPercent + '%';
+
+                    // Store tax ID in a hidden field for form submission
+                    let taxIdField = repeaterWrapper.querySelector('.item-tax-id');
+                    if (!taxIdField) {
+                        taxIdField = document.createElement('input');
+                        taxIdField.type = 'hidden';
+                        taxIdField.className = 'item-tax-id';
+                        repeaterWrapper.appendChild(taxIdField);
+                    }
+                    taxIdField.value = taxId;
+
                     // 3. Call the existing calculation function. It will now use the new percentages
                     // to calculate and display the discount amount, tax amount, and total price.
                     calculateItemTotal(repeaterWrapper);
+
                     // 4. Recalculate the grand totals for the entire credit note
                     calculateSubtotal();
+
                     // 5. Close the dropdown menu
                     const dropdownToggle = repeaterWrapper.querySelector('[data-bs-toggle="dropdown"]');
                     const bsDropdown = bootstrap.Dropdown.getInstance(dropdownToggle);
                     if (bsDropdown) {
                         bsDropdown.hide();
                     }
+
                     // Optional: Add a temporary visual effect to confirm the update
                     const priceDisplays = [
                         repeaterWrapper.querySelector('.item-discount-amount'),
@@ -81,7 +116,7 @@
                 }
             });
             // =========================================================================================
-            // END OF MODIFIED SECTION
+            // END OF FIXED SECTION
             // =========================================================================================
         });
         // Calculate item total with discount and tax
@@ -90,16 +125,22 @@
             const unitPrice = parseFloat(row.querySelector('.selling-unit-price').value) || 0;
             const discountPercent = parseFloat(row.querySelector('.discount').textContent) || 0;
             const taxPercent = parseFloat(row.querySelector('.tax-1').textContent) || 0;
+
             // Calculate base amount
             const baseAmount = qty * unitPrice;
+
             // Calculate discount amount
             const discountAmount = baseAmount * (discountPercent / 100);
+
             // Calculate taxable amount after discount
             const taxableAmount = baseAmount - discountAmount;
+
             // Calculate tax amount
             const taxAmount = taxableAmount * (taxPercent / 100);
+
             // Calculate final total
             const totalAmount = taxableAmount + taxAmount;
+
             // Update display elements for this item row
             row.querySelector('.item-discount-amount').textContent = '$' + discountAmount.toFixed(2);
             row.querySelector('.item-tax-amount').textContent = '$' + taxAmount.toFixed(2);
@@ -126,7 +167,7 @@
                 // Update overall calculations
                 calculateSubtotal();
             }
-            
+
             // Handle invoice selection (replacing client selection)
             if (e.target.id === 'invoiceSelect') {
                 let selected = e.target.options[e.target.selectedIndex];
@@ -183,13 +224,15 @@
                 calculateSubtotal();
             }
         });
+
         function calculateSubtotal() {
             let rows = document.querySelectorAll('.repeater-wrapper');
             let subtotal = 0;
             let itemLevelDiscountTotal = 0;
             let itemLevelTaxTotal = 0;
             rows.forEach(row => {
-                let basePrice = (parseFloat(row.querySelector('.selling-unit-price')?.value) || 0) * (parseFloat(row.querySelector('.quantity')?.value) || 0);
+                let basePrice = (parseFloat(row.querySelector('.selling-unit-price')?.value) || 0) * (parseFloat(row
+                    .querySelector('.quantity')?.value) || 0);
                 subtotal += basePrice;
                 // Calculate item-level discount and tax totals
                 let discountAmountText = row.querySelector('.item-discount-amount')?.textContent || '$0.00';
@@ -197,17 +240,19 @@
                 itemLevelDiscountTotal += parseFloat(discountAmountText.replace('$', ''));
                 itemLevelTaxTotal += parseFloat(taxAmountText.replace('$', ''));
             });
-            
+
             // update subtotal display
             document.getElementById("subtotal-display").textContent = '$' + subtotal.toFixed(2);
             // Update item-level discount and tax totals
-            document.getElementById("item-level-discount-total-display").textContent = '-$' + itemLevelDiscountTotal.toFixed(2);
+            document.getElementById("item-level-discount-total-display").textContent = '-$' + itemLevelDiscountTotal
+                .toFixed(2);
             document.getElementById("item-level-tax-total-display").textContent = '+$' + itemLevelTaxTotal.toFixed(2);
-            
+
             // Calculate subtotal after item-level adjustments
             let subtotalAfterItemAdjustments = subtotal - itemLevelDiscountTotal + itemLevelTaxTotal;
-            document.getElementById("subtotal-after-item-adjustments-display").textContent = '$' + subtotalAfterItemAdjustments.toFixed(2);
-            
+            document.getElementById("subtotal-after-item-adjustments-display").textContent = '$' +
+                subtotalAfterItemAdjustments.toFixed(2);
+
             // Discount logic (document-level)
             let discountValue = parseFloat(document.getElementById("discount")?.value || 0);
             let discountType = document.getElementById("discount-type")?.value || "%";
@@ -250,11 +295,12 @@
             document.getElementById("document_discount_type").value = discountTypeInt;
             document.getElementById("document_discount_rate").value = discountValue.toFixed(2);
         }
+
         function saveCreditNote() {
             const form = document.getElementById('creditNoteForm');
             const invoiceSelect = document.getElementById('invoiceSelect');
             const saveButton = document.getElementById('saveCreditNoteBtn');
-            
+
             // Validate invoice selection
             if (!invoiceSelect.value) {
                 Swal.fire({
@@ -266,7 +312,7 @@
                 invoiceSelect.focus();
                 return;
             }
-            
+
             // Validate at least one item is selected
             const items = document.querySelectorAll('.item-details');
             let hasValidItems = Array.from(items).some(item => item.value);
@@ -279,18 +325,19 @@
                 });
                 return;
             }
-            
+
             // Show loading state
             saveButton.disabled = true;
-            saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
-            
+            saveButton.innerHTML =
+                '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+
             // Prepare form data
             let formData = new FormData(form);
-            
+
             // Format dates to Y-m-d format for database
             let issueDate = document.querySelector('.credit-note-date').value;
             let dueDate = document.querySelector('.due-date').value;
-            
+
             // Convert from m/d/Y to Y-m-d
             if (issueDate) {
                 let parts = issueDate.split('/');
@@ -300,116 +347,121 @@
                 let parts = dueDate.split('/');
                 dueDate = parts[2] + '-' + parts[0] + '-' + parts[1];
             }
-            
+
             // Add issue date and due date
             formData.set('issue_date', issueDate);
             formData.set('due_date', dueDate);
-            
+
             // Get credit note number from the disabled input
             let creditNoteNumber = document.getElementById('creditNoteId').value;
             formData.set('credit_note_number', creditNoteNumber);
-            
+
             // Get document discount type and value from hidden fields which are correctly set by calculateSubtotal()
             formData.set('document_discount_type', document.getElementById("document_discount_type").value);
             formData.set('document_discount_rate', document.getElementById("document_discount_rate").value);
-            
+
             // We use document_discount_amount which is also set by calculateSubtotal()
             formData.set('document_discount_amount', document.getElementById("document_discount_amount").value);
-            
-            // FINAL FIX: No longer sends item description
+
+            // FIXED: Send both tax ID and tax percentage for items
             document.querySelectorAll('.repeater-wrapper').forEach((row, index) => {
                 const itemId = row.querySelector('.item-details')?.value;
                 const qty = parseFloat(row.querySelector('.quantity')?.value || 0);
                 const unitPrice = parseFloat(row.querySelector('.selling-unit-price')?.value || 0);
                 const totalPrice = parseFloat(row.querySelector('.total-price')?.value || 0);
-                
+
                 const itemDiscountPercent = parseFloat(row.querySelector('.discount').textContent) || 0;
                 const itemTaxPercent = parseFloat(row.querySelector('.tax-1').textContent) || 0;
-                
+
+                // Get tax ID from hidden field
+                const taxIdField = row.querySelector('.item-tax-id');
+                const taxId = taxIdField ? parseInt(taxIdField.value) || 0 : 0;
+
                 if (itemId) {
                     formData.append(`items[${index}][item_id]`, itemId);
                     formData.append(`items[${index}][quantity]`, qty);
                     formData.append(`items[${index}][unit_price]`, unitPrice);
                     formData.append(`items[${index}][total_price]`, totalPrice);
                     formData.append(`items[${index}][discount_percent]`, itemDiscountPercent);
-                    formData.append(`items[${index}][tax_id]`, itemTaxPercent);
+                    formData.append(`items[${index}][tax_percent]`, itemTaxPercent);
+                    formData.append(`items[${index}][tax_id]`, taxId);
                 }
             });
-            
+
             // Log for debugging
             console.log('Form data being sent:');
             for (let pair of formData.entries()) {
                 console.log(pair[0] + ': ' + pair[1]);
             }
-            
+
             // AJAX request
             fetch("{{ route('billing.credit-notes.store') }}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                },
-                body: formData
-            })
-            .then(async response => {
-                // Check if the response is ok (status in the range 200-299)
-                if (!response.ok) {
-                    // Try to get the error message from the response
-                    let errorData;
-                    try {
-                        errorData = await response.json();
-                    } catch (e) {
-                        // If we can't parse JSON, use the status text
-                        throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}`);
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                .then(async response => {
+                    // Check if the response is ok (status in the range 200-299)
+                    if (!response.ok) {
+                        // Try to get the error message from the response
+                        let errorData;
+                        try {
+                            errorData = await response.json();
+                        } catch (e) {
+                            // If we can't parse JSON, use the status text
+                            throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}`);
+                        }
+                        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
                     }
-                    throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Reset button state
-                saveButton.disabled = false;
-                saveButton.innerHTML = 'Save';
-                
-                const type = data.type || (data.success ? "success" : "error");
-                const message = data.message || "Operation completed.";
-                
-                if (data.success) {
+                    return response.json();
+                })
+                .then(data => {
+                    // Reset button state
+                    saveButton.disabled = false;
+                    saveButton.innerHTML = 'Save';
+
+                    const type = data.type || (data.success ? "success" : "error");
+                    const message = data.message || "Operation completed.";
+
+                    if (data.success) {
+                        Swal.fire({
+                            icon: type,
+                            title: 'Success!',
+                            text: message,
+                            confirmButtonColor: '#3085d6',
+                        }).then((result) => {
+                            window.location.href = "{{ route('billing.credit-notes.index') }}";
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: type,
+                            title: 'Error!',
+                            text: message,
+                            confirmButtonColor: '#3085d6',
+                        });
+                    }
+                })
+                .catch(error => {
+                    // Reset button state
+                    saveButton.disabled = false;
+                    saveButton.innerHTML = 'Save';
+
+                    console.error('AJAX error:', error);
+
                     Swal.fire({
-                        icon: type,
-                        title: 'Success!',
-                        text: message,
-                        confirmButtonColor: '#3085d6',
-                    }).then((result) => {
-                        window.location.href = "{{ route('billing.credit-notes.index') }}";
-                    });
-                } else {
-                    Swal.fire({
-                        icon: type,
+                        icon: 'error',
                         title: 'Error!',
-                        text: message,
+                        html: `<div>An error occurred while saving the credit note.</div>
+                          <div class="text-muted small mt-2">${error.message}</div>`,
                         confirmButtonColor: '#3085d6',
                     });
-                }
-            })
-            .catch(error => {
-                // Reset button state
-                saveButton.disabled = false;
-                saveButton.innerHTML = 'Save';
-                
-                console.error('AJAX error:', error);
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    html: `<div>An error occurred while saving the credit note.</div>
-                          <div class="text-muted small mt-2">${error.message}</div>`,
-                    confirmButtonColor: '#3085d6',
                 });
-            });
         }
-      
+
         function previewCreditNote() {
             Swal.fire({
                 icon: 'info',
@@ -478,7 +530,8 @@
                                 <dd class="col-sm-7">
                                     <input type="text" class="form-control" disabled
                                         placeholder="{{ $nextCreditNoteNumber ?? '#3905' }}"
-                                        value="{{ $nextCreditNoteNumber ?? '#3905' }}" id="creditNoteId" name="credit_note_number" />
+                                        value="{{ $nextCreditNoteNumber ?? '#3905' }}" id="creditNoteId"
+                                        name="credit_note_number" />
                                 </dd>
                                 <dt class="col-sm-5 mb-1 d-md-flex align-items-center justify-content-end">
                                     <span class="fw-normal">Date Issued:</span>
@@ -504,16 +557,17 @@
                                 <option value="">-- Select Invoice --</option>
                                 @if (count($invoices) > 0)
                                     @foreach ($invoices as $invoice)
-                                        <option value="{{ $invoice->id }}" 
+                                        <option value="{{ $invoice->id }}"
                                             data-customer="{{ $invoice->customer->name ?? '' }}"
                                             data-company="{{ $invoice->customer->company_name ?? '' }}"
                                             data-address="{{ $invoice->customer->address ?? '' }}"
                                             data-city="{{ $invoice->customer->city ?? '' }}"
-                                            data-state="{{ $invoice->customer->state ?? '' }}" 
+                                            data-state="{{ $invoice->customer->state ?? '' }}"
                                             data-zip="{{ $invoice->customer->zip ?? '' }}"
                                             data-phone="{{ $invoice->customer->phone ?? '' }}"
                                             data-email="{{ $invoice->customer->email ?? '' }}">
-                                            {{ $invoice->invoice_number }} - {{ $invoice->customer->name ?? 'Unknown Customer' }}
+                                            {{ $invoice->invoice_number }} -
+                                            {{ $invoice->customer->name ?? 'Unknown Customer' }}
                                         </option>
                                     @endforeach
                                 @else
@@ -547,7 +601,7 @@
                         <div class="credit-note-form-container">
                             <div class="mb-4" data-repeater-list="items">
                                 <!-- ======================================================================= -->
-                                <!-- FINAL MODIFIED ITEM ROW (DESCRIPTION TEXTAREA REMOVED) -->
+                                <!-- FIXED ITEM ROW WITH UPDATED TAX DROPDOWN -->
                                 <!-- ======================================================================= -->
                                 <div class="repeater-wrapper pt-0 pt-md-9" data-repeater-item>
                                     <div class="d-flex border rounded position-relative pe-0">
@@ -568,13 +622,13 @@
                                                         <option value="" disabled>No items available</option>
                                                     @endif
                                                 </select>
-                                                <!-- The item-description textarea is now completely removed from here -->
                                             </div>
                                             <!-- Selling Unit Price -->
                                             <div class="col-md-3 col-12 mb-md-0 mb-4">
                                                 <p class="h6 repeater-title">Selling Unit Price</p>
-                                                <input type="number" class="form-control selling-unit-price" name="unit_price"
-                                                    placeholder="999999999.00" step="0.01" min="0">
+                                                <input type="number" class="form-control selling-unit-price"
+                                                    name="unit_price" placeholder="999999999.00" step="0.01"
+                                                    min="0">
                                                 <!-- Item Level Discount and Tax Display -->
                                                 <div class="text-heading mt-2">
                                                     <div class="mb-1">
@@ -625,18 +679,20 @@
                                                             <small class="text-muted">Valid range: 0-100%</small>
                                                         </div>
                                                         <div class="col-12">
-                                                            <label for="taxInput1" class="form-label">Item Level Tax</label>
-                                                            <select name="tax-1-input" id="taxInput1"
-                                                                class="form-select tax-select">
-                                                                <option value="0%" selected>0%</option>
+                                                            <label for="taxInput1" class="form-label">Item Level
+                                                                Tax</label>
+                                                            <select id="taxInput1" class="form-select tax-select">
+                                                                <option value="0" data-id="0" selected>0%</option>
                                                                 @if (count($taxes) > 0)
                                                                     @foreach ($taxes as $tax)
-                                                                        <option value="{{ $tax->id }}%">
+                                                                        <option value="{{ $tax->percentage }}"
+                                                                            data-id="{{ $tax->id }}">
                                                                             {{ $tax->name }} ({{ $tax->percentage }}%)
                                                                         </option>
                                                                     @endforeach
                                                                 @else
-                                                                    <option value="0%">No tax (0%)</option>
+                                                                    <option value="0" data-id="0">No tax (0%)
+                                                                    </option>
                                                                 @endif
                                                             </select>
                                                         </div>
@@ -653,7 +709,7 @@
                             </div>
                             <div class="row">
                                 <div class="col-12">
-                                    <button type="button" class="btn btn-sm btn-primary" data-repeater-create><i
+                                    <button type="button" class="btn btn-sm btn-primary" data-repeater-create"><i
                                             class="icon-base bx bx-plus icon-xs me-1_5"></i>Add Item</button>
                                 </div>
                             </div>
@@ -678,8 +734,7 @@
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="w-px-100">Item Level Tax:</span>
-                                    <span class="fw-medium text-heading"
-                                        id="item-level-tax-total-display">+$0.00</span>
+                                    <span class="fw-medium text-heading" id="item-level-tax-total-display">+$0.00</span>
                                 </div>
                                 <hr class="my-2" />
                                 <div class="d-flex justify-content-between mb-2">
@@ -692,9 +747,8 @@
                                         <span>Discount:</span>
                                     </div>
                                     <div class="d-flex align-items-center">
-                                        <input type="number" id="discount"
-                                            class="form-control form-control-sm me-2" value="0"
-                                            style="width: 80px;" min="0">
+                                        <input type="number" id="discount" class="form-control form-control-sm me-2"
+                                            value="0" style="width: 80px;" min="0">
                                         <select class="form-select form-select-sm me-2" style="width: 70px;"
                                             id="discount-type">
                                             <option value="%" selected>%</option>
@@ -718,7 +772,8 @@
                                             <option value="0" data-rate="0">No Tax (0%)</option>
                                             @if (count($taxes) > 0)
                                                 @foreach ($taxes as $tax)
-                                                    <option value="{{ $tax->id }}" data-rate="{{ $tax->percentage }}">
+                                                    <option value="{{ $tax->id }}"
+                                                        data-rate="{{ $tax->percentage }}">
                                                         {{ $tax->name }} ({{ $tax->percentage }}%)</option>
                                                 @endforeach
                                             @endif

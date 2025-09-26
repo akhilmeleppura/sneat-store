@@ -1,19 +1,6 @@
-// Modules/Billing/Resources/views/credit-notes/show.blade.php
-@extends('layouts/layoutMaster')
-@section('title', 'Preview - Credit Note')
-@section('vendor-style')
-    @vite('resources/assets/vendor/libs/flatpickr/flatpickr.scss')
-@endsection
-@section('page-style')
-    @vite('resources/assets/vendor/scss/pages/app-invoice.scss')
-@endsection
-@section('vendor-script')
-    @vite(['resources/assets/vendor/libs/moment/moment.js', 'resources/assets/vendor/libs/flatpickr/flatpickr.js', 'resources/assets/vendor/libs/cleave-zen/cleave-zen.js'])
-@endsection
-@section('page-script')
-    @vite(['resources/assets/js/offcanvas-send-invoice.js'])
-@endsection
-@section('content')
+@extends($templateView)
+
+@section('template-content')
     <div class="row invoice-preview">
         <!-- Credit Note -->
         <div class="col-xl-9 col-md-8 col-12 mb-md-0 mb-6">
@@ -23,8 +10,9 @@
                         class="d-flex justify-content-between flex-xl-row flex-md-column flex-sm-row flex-column align-items-xl-center align-items-md-start align-items-sm-center align-items-start">
                         <div class="mb-xl-0 mb-6 text-heading">
                             <div class="d-flex svg-illustration mb-6 gap-2 align-items-center">
-                                @if($branchLogo)
-                                    <img src="{{ $branchLogo }}" alt="Branch Logo" class="app-brand-logo" style="height: 40px;">
+                                @if ($branchLogo)
+                                    <img src="{{ $branchLogo }}" alt="Branch Logo" class="app-brand-logo"
+                                        style="height: 40px;">
                                 @else
                                     <span class="app-brand-logo demo">@include('_partials.macros')</span>
                                 @endif
@@ -32,11 +20,13 @@
                                     {{ $creditNote->company?->name ?? config('variables.templateName') }}
                                 </span>
                             </div>
-                            @if($creditNote->branch)
+                            @if ($creditNote->branch)
                                 @php $branch = $creditNote->branch; @endphp
                                 <p class="mb-1"><strong>{{ $branch->name ?? 'N/A' }}</strong></p>
                                 <p class="mb-2">{{ $branch->address ?? 'N/A' }}</p>
-                                <p class="mb-2">{{ $branch->city ?? '' }}{{ $branch->city && $branch->state ? ', ' : '' }}{{ $branch->state ?? '' }} {{ $branch->zip_code ?? '' }}</p>
+                                <p class="mb-2">
+                                    {{ $branch->city ?? '' }}{{ $branch->city && $branch->state ? ', ' : '' }}{{ $branch->state ?? '' }}
+                                    {{ $branch->zip_code ?? '' }}</p>
                                 <p class="mb-2">{{ $branch->country ?? '' }}</p>
                                 <p class="mb-2">{{ $branch->email ?? 'N/A' }}</p>
                                 <p class="mb-0">{{ $branch->phone ?? 'N/A' }}</p>
@@ -48,14 +38,17 @@
                             @endif
                         </div>
                         <div>
-                            <h5 class="mb-6">Credit Note #{{ $creditNote->document_prefix }}-{{ $creditNote->document_number }}</h5>
+                            <h5 class="mb-6">Credit Note
+                                #{{ $creditNote->document_prefix }}-{{ $creditNote->document_number }}</h5>
                             <div class="mb-1 text-heading">
                                 <span>Date Issued:</span>
-                                <span class="fw-medium">{{ $creditNote->issue_date ? $creditNote->issue_date->format('M d, Y') : 'N/A' }}</span>
+                                <span
+                                    class="fw-medium">{{ $creditNote->issue_date ? $creditNote->issue_date->format('M d, Y') : 'N/A' }}</span>
                             </div>
                             <div class="text-heading">
                                 <span>Date Due:</span>
-                                <span class="fw-medium">{{ $creditNote->due_date ? $creditNote->due_date->format('M d, Y') : 'N/A' }}</span>
+                                <span
+                                    class="fw-medium">{{ $creditNote->due_date ? $creditNote->due_date->format('M d, Y') : 'N/A' }}</span>
                             </div>
                         </div>
                     </div>
@@ -64,19 +57,20 @@
                     <div class="row">
                         <div class="col-xl-6 col-md-12 col-sm-5 col-12 mb-xl-0 mb-md-6 mb-sm-0 mb-6">
                             <h6>Credit Note Details:</h6>
-                            <p class="mb-1"><strong>Payment Status:</strong> 
-                                <span class="badge bg-label-{{ $creditNote->payment_status == 'paid' ? 'success' : ($creditNote->payment_status == 'unpaid' ? 'danger' : 'warning') }}">
+                            <p class="mb-1"><strong>Payment Status:</strong>
+                                <span
+                                    class="badge bg-label-{{ $creditNote->payment_status == 'paid' ? 'success' : ($creditNote->payment_status == 'unpaid' ? 'danger' : 'warning') }}">
                                     {{ ucfirst($creditNote->payment_status) }}
                                 </span>
                             </p>
-                            @if($creditNote->invoice)
-                                <p class="mb-1"><strong>Associated Invoice:</strong> 
+                            @if ($creditNote->invoice)
+                                <p class="mb-1"><strong>Associated Invoice:</strong>
                                     <a href="{{ route('billing.invoices.show', $creditNote->invoice->id) }}">
                                         #{{ $creditNote->invoice->document_prefix }}-{{ $creditNote->invoice->document_number }}
                                     </a>
                                 </p>
                             @endif
-                            @if($creditNote->note)
+                            @if ($creditNote->note)
                                 <p class="mb-0"><strong>Note:</strong> {{ $creditNote->note }}</p>
                             @endif
                         </div>
@@ -86,27 +80,29 @@
                                 <tbody>
                                     <tr>
                                         <td class="pe-4">Total Credit:</td>
-                                        <td class="fw-medium">${{ number_format($creditNote->sub_total - ($creditNote->document_discount_amount ?? 0) + ($creditNote->tax_amount ?? 0), 2) }}</td>
+                                        <td class="fw-medium">
+                                            ${{ number_format($creditNote->sub_total - ($creditNote->document_discount_amount ?? 0) + ($creditNote->tax_amount ?? 0), 2) }}
+                                        </td>
                                     </tr>
-                                    @if($creditNote->branch && $creditNote->branch->bank_name)
+                                    @if ($creditNote->branch && $creditNote->branch->bank_name)
                                         <tr>
                                             <td class="pe-4">Bank name:</td>
                                             <td>{{ $creditNote->branch->bank_name }}</td>
                                         </tr>
                                     @endif
-                                    @if($creditNote->branch && $creditNote->branch->bank_country)
+                                    @if ($creditNote->branch && $creditNote->branch->bank_country)
                                         <tr>
                                             <td class="pe-4">Country:</td>
                                             <td>{{ $creditNote->branch->bank_country }}</td>
                                         </tr>
                                     @endif
-                                    @if($creditNote->branch && $creditNote->branch->iban)
+                                    @if ($creditNote->branch && $creditNote->branch->iban)
                                         <tr>
                                             <td class="pe-4">IBAN:</td>
                                             <td>{{ $creditNote->branch->iban }}</td>
                                         </tr>
                                     @endif
-                                    @if($creditNote->branch && $creditNote->branch->swift_code)
+                                    @if ($creditNote->branch && $creditNote->branch->swift_code)
                                         <tr>
                                             <td class="pe-4">SWIFT code:</td>
                                             <td>{{ $creditNote->branch->swift_code }}</td>
@@ -162,9 +158,9 @@
                                 </td>
                                 <td class="px-0 py-6 w-px-100">
                                     <p class="mb-2">Subtotal:</p>
-                                    @if($creditNote->document_discount_amount > 0)
-                                        <p class="mb-2">Discount 
-                                            @if($creditNote->document_discount_type == 1 && $creditNote->document_discount_rate)
+                                    @if ($creditNote->document_discount_amount > 0)
+                                        <p class="mb-2">Discount
+                                            @if ($creditNote->document_discount_type == 1 && $creditNote->document_discount_rate)
                                                 ({{ $creditNote->document_discount_rate }}%)
                                             @endif:
                                         </p>
@@ -174,11 +170,15 @@
                                 </td>
                                 <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
                                     <p class="fw-medium mb-2">${{ number_format($creditNote->sub_total, 2) }}</p>
-                                    @if($creditNote->document_discount_amount > 0)
-                                        <p class="fw-medium mb-2">-${{ number_format($creditNote->document_discount_amount, 2) }}</p>
+                                    @if ($creditNote->document_discount_amount > 0)
+                                        <p class="fw-medium mb-2">
+                                            -${{ number_format($creditNote->document_discount_amount, 2) }}</p>
                                     @endif
-                                    <p class="fw-medium mb-2 border-bottom pb-2">${{ number_format($creditNote->tax_amount ?? 0, 2) }}</p>
-                                    <p class="fw-medium mb-0">${{ number_format($creditNote->sub_total - ($creditNote->document_discount_amount ?? 0) + ($creditNote->tax_amount ?? 0), 2) }}</p>
+                                    <p class="fw-medium mb-2 border-bottom pb-2">
+                                        ${{ number_format($creditNote->tax_amount ?? 0, 2) }}</p>
+                                    <p class="fw-medium mb-0">
+                                        ${{ number_format($creditNote->sub_total - ($creditNote->document_discount_amount ?? 0) + ($creditNote->tax_amount ?? 0), 2) }}
+                                    </p>
                                 </td>
                             </tr>
                         </tbody>
@@ -214,7 +214,8 @@
                             href="{{ route('billing.credit-notes.print', $creditNote->id) }}">
                             Print
                         </a>
-                        <a href="{{ route('billing.credit-notes.edit', $creditNote->id) }}" class="btn btn-label-secondary d-grid w-100">
+                        <a href="{{ route('billing.credit-notes.edit', $creditNote->id) }}"
+                            class="btn btn-label-secondary d-grid w-100">
                             Edit </a>
                     </div>
                     <button class="btn btn-danger d-grid w-100" onclick="confirmDelete()">
@@ -230,7 +231,7 @@
     @include('_partials/_offcanvas/offcanvas-send-invoice')
     <!-- /Offcanvas -->
 @endsection
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     function confirmDelete() {
@@ -250,7 +251,8 @@
     }
 </script>
 
-<form id="delete-form" action="{{ route('billing.credit-notes.destroy', $creditNote->id) }}" method="POST" style="display: none;">
+<form id="delete-form" action="{{ route('billing.credit-notes.destroy', $creditNote->id) }}" method="POST"
+    style="display: none;">
     @csrf
     @method('DELETE')
 </form>

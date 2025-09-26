@@ -11,192 +11,147 @@ use Modules\Accounting\App\Models\JournalIndex;
 use Modules\Accounting\App\Models\JournalEntries;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
-
+use Carbon\Carbon;
 
 class TrialBalanceController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display the trial balance report.
+     *
+     * @return \Illuminate\View\View
      */
-//  public function index()
-// {
-//     $dateRange = request()->input('date_range');
+    public function index()
+    {
+        $dateRange = request()->input('date_range');
 
-//     if ($dateRange) {
-//         // Parse start and end date from 'YYYY-MM-DD to YYYY-MM-DD'
-//         [$startDate, $endDate] = explode(' to ', $dateRange);
-//     } else {
-//         // Default: current month
-//         $startDate = now()->copy()->startOfMonth()->toDateString();
-//         $endDate = now()->copy()->endOfMonth()->toDateString();
-//     }
+        if ($dateRange) {
+            [$startDate, $endDate] = explode(' to ', $dateRange);
+        } else {
+            $startDate = now()->copy()->startOfMonth()->toDateString();
+            $endDate = now()->copy()->endOfMonth()->toDateString();
+        }
 
-//     // Get all accounts with opening balances
-//     $accounts = ChartOfAccount::with('openingBalance')->get();
+        // Get all accounts with opening balance
+        $accounts = ChartOfAccount::with('openingBalance')->get();
 
-//     $trialBalanceData = $accounts->map(function ($account) use ($startDate, $endDate) {
-//         // Opening balances
-//         $openingDebit = $account->openingBalance->debit_amount ?? 0;
-//         $openingCredit = $account->openingBalance->credit_amount ?? 0;
+        $trialBalanceData = $accounts->map(function ($account) use ($startDate, $endDate) {
+            $baseOpeningDebit = $account->openingBalance->debit_amount ?? 0;
+            $baseOpeningCredit = $account->openingBalance->credit_amount ?? 0;
 
-//         // Transactions in selected date range
-//         $transactions = JournalEntries::where('chart_of_account_id', $account->id)
-//             ->whereBetween('created_at', [$startDate, $endDate])
-//             ->selectRaw('SUM(debit_amount) as debit_sum, SUM(credit_amount) as credit_sum')
-//             ->first();
+            // Transactions before the start date (for adjusted opening balance)
+            $previousTransactions = JournalEntries::where('chart_of_account_id', $account->id)
+                ->where('created_at', '<', $startDate)
+                ->selectRaw('SUM(debit_amount) as debit_sum, SUM(credit_amount) as credit_sum')
+                ->first();
 
-//         $transactionDebit = $transactions->debit_sum ?? 0;
-//         $transactionCredit = $transactions->credit_sum ?? 0;
+            $previousDebit = $previousTransactions->debit_sum ?? 0;
+            $previousCredit = $previousTransactions->credit_sum ?? 0;
 
-//         // Closing balance calculation
-//         $closingDebit = ($openingDebit + $transactionDebit) - $transactionCredit;
-//         $closingCredit = ($openingCredit + $transactionCredit) - $transactionDebit;
+            // Adjusted opening balances
+            $openingDebit = $baseOpeningDebit + $previousDebit;
+            $openingCredit = $baseOpeningCredit + $previousCredit;
 
-//         return [
-//             'account_name' => $account->name . ' [' . strtoupper($account->type) . ']',
-//             'opening_debit' => $openingDebit,
-//             'opening_credit' => $openingCredit,
-//             'transaction_debit' => $transactionDebit,
-//             'transaction_credit' => $transactionCredit,
-//             'closing_debit' => $closingDebit > 0 ? $closingDebit : 0,
-//             'closing_credit' => $closingCredit > 0 ? $closingCredit : 0,
-//         ];
-//     });
+            // Transactions within selected date range
+            $transactions = JournalEntries::where('chart_of_account_id', $account->id)
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->selectRaw('SUM(debit_amount) as debit_sum, SUM(credit_amount) as credit_sum')
+                ->first();
 
-//     return view('accounting::trialbalance.index', [
-//         'trialBalanceData' => $trialBalanceData,
-//         'startDate' => $startDate,
-//         'endDate' => $endDate,
-//     ]);
-// }
-public function index()
-{
-    $dateRange = request()->input('date_range');
+            $transactionDebit = $transactions->debit_sum ?? 0;
+            $transactionCredit = $transactions->credit_sum ?? 0;
 
-    if ($dateRange) {
-        [$startDate, $endDate] = explode(' to ', $dateRange);
-    } else {
-        $startDate = now()->copy()->startOfMonth()->toDateString();
-        $endDate = now()->copy()->endOfMonth()->toDateString();
+            // Closing balances
+            $closingDebit = ($openingDebit + $transactionDebit) - $transactionCredit;
+            $closingCredit = ($openingCredit + $transactionCredit) - $transactionDebit;
+
+            return [
+                'account_id' => $account->id,
+                'account_name' => $account->account_name . ' [' . strtoupper($account->type) . ']',
+                'opening_debit' => $openingDebit,
+                'opening_credit' => $openingCredit,
+                'transaction_debit' => $transactionDebit,
+                'transaction_credit' => $transactionCredit,
+                'closing_debit' => $closingDebit > 0 ? $closingDebit : 0,
+                'closing_credit' => $closingCredit > 0 ? $closingCredit : 0,
+            ];
+        });
+
+        return view('accounting::trialbalance.index', [
+            'trialBalanceData' => $trialBalanceData,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ]);
     }
 
-    // Get all accounts with opening balance
-    $accounts = ChartOfAccount::with('openingBalance')->get();
+    /**
+     * Export the trial balance report as PDF.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function exportPdf()
+    {
+        $dateRange = request()->input('date_range');
 
-    $trialBalanceData = $accounts->map(function ($account) use ($startDate, $endDate) {
-        $baseOpeningDebit = $account->openingBalance->debit_amount ?? 0;
-        $baseOpeningCredit = $account->openingBalance->credit_amount ?? 0;
+        if ($dateRange) {
+            [$startDate, $endDate] = explode(' to ', $dateRange);
+        } else {
+            $startDate = now()->copy()->startOfMonth()->toDateString();
+            $endDate = now()->copy()->endOfMonth()->toDateString();
+        }
 
-        // Transactions before the start date (for adjusted opening balance)
-        $previousTransactions = JournalEntries::where('chart_of_account_id', $account->id)
-            ->where('created_at', '<', $startDate)
-            ->selectRaw('SUM(debit_amount) as debit_sum, SUM(credit_amount) as credit_sum')
-            ->first();
+        $accounts = ChartOfAccount::with('openingBalance')->get();
 
-        $previousDebit = $previousTransactions->debit_sum ?? 0;
-        $previousCredit = $previousTransactions->credit_sum ?? 0;
+        $trialBalanceData = $accounts->map(function ($account) use ($startDate, $endDate) {
+            $baseOpeningDebit = $account->openingBalance->debit_amount ?? 0;
+            $baseOpeningCredit = $account->openingBalance->credit_amount ?? 0;
 
-        // Adjusted opening balances
-        $openingDebit = $baseOpeningDebit + $previousDebit;
-        $openingCredit = $baseOpeningCredit + $previousCredit;
+            $previousTransactions = JournalEntries::where('chart_of_account_id', $account->id)
+                ->where('created_at', '<', $startDate)
+                ->selectRaw('SUM(debit_amount) as debit_sum, SUM(credit_amount) as credit_sum')
+                ->first();
 
-        // Transactions within selected date range
-        $transactions = JournalEntries::where('chart_of_account_id', $account->id)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('SUM(debit_amount) as debit_sum, SUM(credit_amount) as credit_sum')
-            ->first();
+            $previousDebit = $previousTransactions->debit_sum ?? 0;
+            $previousCredit = $previousTransactions->credit_sum ?? 0;
 
-        $transactionDebit = $transactions->debit_sum ?? 0;
-        $transactionCredit = $transactions->credit_sum ?? 0;
+            $openingDebit = $baseOpeningDebit + $previousDebit;
+            $openingCredit = $baseOpeningCredit + $previousCredit;
 
-        // Closing balances
-        $closingDebit = ($openingDebit + $transactionDebit) - $transactionCredit;
-        $closingCredit = ($openingCredit + $transactionCredit) - $transactionDebit;
+            $transactions = JournalEntries::where('chart_of_account_id', $account->id)
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->selectRaw('SUM(debit_amount) as debit_sum, SUM(credit_amount) as credit_sum')
+                ->first();
 
-        return [
-            'account_id' => $account->id,
-            'account_name' => $account->account_name . ' [' . strtoupper($account->type) . ']',
-            'opening_debit' => $openingDebit,
-            'opening_credit' => $openingCredit,
-            'transaction_debit' => $transactionDebit,
-            'transaction_credit' => $transactionCredit,
-            'closing_debit' => $closingDebit > 0 ? $closingDebit : 0,
-            'closing_credit' => $closingCredit > 0 ? $closingCredit : 0,
-        ];
-    });
+            $transactionDebit = $transactions->debit_sum ?? 0;
+            $transactionCredit = $transactions->credit_sum ?? 0;
 
-    return view('accounting::trialbalance.index', [
-        'trialBalanceData' => $trialBalanceData,
-        'startDate' => $startDate,
-        'endDate' => $endDate,
-    ]);
-}
+            $closingDebit = ($openingDebit + $transactionDebit) - $transactionCredit;
+            $closingCredit = ($openingCredit + $transactionCredit) - $transactionDebit;
 
+            return [
+                'account_id' => $account->id,
+                'account_name' => $account->account_name . ' [' . strtoupper($account->type) . ']',
+                'opening_debit' => $openingDebit,
+                'opening_credit' => $openingCredit,
+                'transaction_debit' => $transactionDebit,
+                'transaction_credit' => $transactionCredit,
+                'closing_debit' => $closingDebit > 0 ? $closingDebit : 0,
+                'closing_credit' => $closingCredit > 0 ? $closingCredit : 0,
+            ];
+        });
 
-public function exportPdf()
-{
-    $dateRange = request()->input('date_range');
+        $pdf = Pdf::loadView('accounting::trialbalance.trial-balance-pdf', [
+            'trialBalanceData' => $trialBalanceData,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ]);
 
-    if ($dateRange) {
-        [$startDate, $endDate] = explode(' to ', $dateRange);
-    } else {
-        $startDate = now()->copy()->startOfMonth()->toDateString();
-        $endDate = now()->copy()->endOfMonth()->toDateString();
+        return $pdf->download('trial_balance_report.pdf');
     }
-
-    $accounts = ChartOfAccount::with('openingBalance')->get();
-
-    $trialBalanceData = $accounts->map(function ($account) use ($startDate, $endDate) {
-        $baseOpeningDebit = $account->openingBalance->debit_amount ?? 0;
-        $baseOpeningCredit = $account->openingBalance->credit_amount ?? 0;
-
-        $previousTransactions = JournalEntries::where('chart_of_account_id', $account->id)
-            ->where('created_at', '<', $startDate)
-            ->selectRaw('SUM(debit_amount) as debit_sum, SUM(credit_amount) as credit_sum')
-            ->first();
-
-        $previousDebit = $previousTransactions->debit_sum ?? 0;
-        $previousCredit = $previousTransactions->credit_sum ?? 0;
-
-        $openingDebit = $baseOpeningDebit + $previousDebit;
-        $openingCredit = $baseOpeningCredit + $previousCredit;
-
-        $transactions = JournalEntries::where('chart_of_account_id', $account->id)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('SUM(debit_amount) as debit_sum, SUM(credit_amount) as credit_sum')
-            ->first();
-
-        $transactionDebit = $transactions->debit_sum ?? 0;
-        $transactionCredit = $transactions->credit_sum ?? 0;
-
-        $closingDebit = ($openingDebit + $transactionDebit) - $transactionCredit;
-        $closingCredit = ($openingCredit + $transactionCredit) - $transactionDebit;
-
-        return [
-            'account_id' => $account->id,
-            'account_name' => $account->account_name . ' [' . strtoupper($account->type) . ']',
-            'opening_debit' => $openingDebit,
-            'opening_credit' => $openingCredit,
-            'transaction_debit' => $transactionDebit,
-            'transaction_credit' => $transactionCredit,
-            'closing_debit' => $closingDebit > 0 ? $closingDebit : 0,
-            'closing_credit' => $closingCredit > 0 ? $closingCredit : 0,
-        ];
-    });
-
-    $pdf = Pdf::loadView('accounting::trialbalance.trial-balance-pdf', [
-        'trialBalanceData' => $trialBalanceData,
-        'startDate' => $startDate,
-        'endDate' => $endDate,
-    ]);
-
-    return $pdf->download('trial_balance_report.pdf');
-}
-
-
 
     /**
      * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\View\View
      */
     public function create()
     {
@@ -205,11 +160,17 @@ public function exportPdf()
 
     /**
      * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
      */
     public function store(Request $request) {}
 
     /**
      * Show the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\View\View
      */
     public function show($id)
     {
@@ -218,6 +179,9 @@ public function exportPdf()
 
     /**
      * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\View\View
      */
     public function edit($id)
     {
@@ -226,11 +190,18 @@ public function exportPdf()
 
     /**
      * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id) {}
 
     /**
      * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
      */
     public function destroy($id) {}
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Helpers\HS;
 
 use Illuminate\Http\JsonResponse;

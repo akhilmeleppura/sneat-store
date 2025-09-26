@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BillingPaymentStatus extends Model
 {
-     use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'billing_payment_status';
 

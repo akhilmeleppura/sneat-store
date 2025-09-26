@@ -1,18 +1,6 @@
-@extends('layouts/layoutMaster')
-@section('title', 'Preview - Debit Note')
-@section('vendor-style')
-    @vite('resources/assets/vendor/libs/flatpickr/flatpickr.scss')
-@endsection
-@section('page-style')
-    @vite('resources/assets/vendor/scss/pages/app-invoice.scss')
-@endsection
-@section('vendor-script')
-    @vite(['resources/assets/vendor/libs/moment/moment.js', 'resources/assets/vendor/libs/flatpickr/flatpickr.js', 'resources/assets/vendor/libs/cleave-zen/cleave-zen.js'])
-@endsection
-@section('page-script')
-    @vite(['resources/assets/js/offcanvas-send-invoice.js'])
-@endsection
-@section('content')
+@extends($templateView)
+
+@section('template-content')
     <div class="row invoice-preview">
         <!-- Debit Note -->
         <div class="col-xl-9 col-md-8 col-12 mb-md-0 mb-6">
@@ -22,8 +10,9 @@
                         class="d-flex justify-content-between flex-xl-row flex-md-column flex-sm-row flex-column align-items-xl-center align-items-md-start align-items-sm-center align-items-start">
                         <div class="mb-xl-0 mb-6 text-heading">
                             <div class="d-flex svg-illustration mb-6 gap-2 align-items-center">
-                                @if($branchLogo)
-                                    <img src="{{ $branchLogo }}" alt="Branch Logo" class="app-brand-logo" style="height: 40px;">
+                                @if ($branchLogo)
+                                    <img src="{{ $branchLogo }}" alt="Branch Logo" class="app-brand-logo"
+                                        style="height: 40px;">
                                 @else
                                     <span class="app-brand-logo demo">@include('_partials.macros')</span>
                                 @endif
@@ -31,11 +20,13 @@
                                     {{ $debitNote->company?->name ?? config('variables.templateName') }}
                                 </span>
                             </div>
-                            @if($debitNote->branch)
+                            @if ($debitNote->branch)
                                 @php $branch = $debitNote->branch; @endphp
                                 <p class="mb-1"><strong>{{ $branch->name ?? 'N/A' }}</strong></p>
                                 <p class="mb-2">{{ $branch->address ?? 'N/A' }}</p>
-                                <p class="mb-2">{{ $branch->city ?? '' }}{{ $branch->city && $branch->state ? ', ' : '' }}{{ $branch->state ?? '' }} {{ $branch->zip_code ?? '' }}</p>
+                                <p class="mb-2">
+                                    {{ $branch->city ?? '' }}{{ $branch->city && $branch->state ? ', ' : '' }}{{ $branch->state ?? '' }}
+                                    {{ $branch->zip_code ?? '' }}</p>
                                 <p class="mb-2">{{ $branch->country ?? '' }}</p>
                                 <p class="mb-2">{{ $branch->email ?? 'N/A' }}</p>
                                 <p class="mb-0">{{ $branch->phone ?? 'N/A' }}</p>
@@ -47,14 +38,17 @@
                             @endif
                         </div>
                         <div>
-                            <h5 class="mb-6">Debit Note #{{ $debitNote->document_prefix }}-{{ $debitNote->document_number }}</h5>
+                            <h5 class="mb-6">Debit Note
+                                #{{ $debitNote->document_prefix }}-{{ $debitNote->document_number }}</h5>
                             <div class="mb-1 text-heading">
                                 <span>Date Issued:</span>
-                                <span class="fw-medium">{{ $debitNote->issue_date ? $debitNote->issue_date->format('M d, Y') : 'N/A' }}</span>
+                                <span
+                                    class="fw-medium">{{ $debitNote->issue_date ? $debitNote->issue_date->format('M d, Y') : 'N/A' }}</span>
                             </div>
                             <div class="text-heading">
                                 <span>Date Due:</span>
-                                <span class="fw-medium">{{ $debitNote->due_date ? $debitNote->due_date->format('M d, Y') : 'N/A' }}</span>
+                                <span
+                                    class="fw-medium">{{ $debitNote->due_date ? $debitNote->due_date->format('M d, Y') : 'N/A' }}</span>
                             </div>
                         </div>
                     </div>
@@ -63,19 +57,20 @@
                     <div class="row">
                         <div class="col-xl-6 col-md-12 col-sm-5 col-12 mb-xl-0 mb-md-6 mb-sm-0 mb-6">
                             <h6>Debit Note Details:</h6>
-                            <p class="mb-1"><strong>Payment Status:</strong> 
-                                <span class="badge bg-label-{{ $debitNote->payment_status == 'paid' ? 'success' : ($debitNote->payment_status == 'unpaid' ? 'danger' : 'warning') }}">
+                            <p class="mb-1"><strong>Payment Status:</strong>
+                                <span
+                                    class="badge bg-label-{{ $debitNote->payment_status == 'paid' ? 'success' : ($debitNote->payment_status == 'unpaid' ? 'danger' : 'warning') }}">
                                     {{ ucfirst($debitNote->payment_status) }}
                                 </span>
                             </p>
-                            @if($debitNote->invoice)
-                                <p class="mb-1"><strong>Associated Invoice:</strong> 
+                            @if ($debitNote->invoice)
+                                <p class="mb-1"><strong>Associated Invoice:</strong>
                                     <a href="{{ route('billing.invoices.show', $debitNote->invoice->id) }}">
                                         #{{ $debitNote->invoice->document_prefix }}-{{ $debitNote->invoice->document_number }}
                                     </a>
                                 </p>
                             @endif
-                            @if($debitNote->note)
+                            @if ($debitNote->note)
                                 <p class="mb-0"><strong>Note:</strong> {{ $debitNote->note }}</p>
                             @endif
                         </div>
@@ -85,27 +80,29 @@
                                 <tbody>
                                     <tr>
                                         <td class="pe-4">Total Due:</td>
-                                        <td class="fw-medium">${{ number_format($debitNote->sub_total - ($debitNote->document_discount_amount ?? 0) + ($debitNote->tax_amount ?? 0), 2) }}</td>
+                                        <td class="fw-medium">
+                                            ${{ number_format($debitNote->sub_total - ($debitNote->document_discount_amount ?? 0) + ($debitNote->tax_amount ?? 0), 2) }}
+                                        </td>
                                     </tr>
-                                    @if($debitNote->branch && $debitNote->branch->bank_name)
+                                    @if ($debitNote->branch && $debitNote->branch->bank_name)
                                         <tr>
                                             <td class="pe-4">Bank name:</td>
                                             <td>{{ $debitNote->branch->bank_name }}</td>
                                         </tr>
                                     @endif
-                                    @if($debitNote->branch && $debitNote->branch->bank_country)
+                                    @if ($debitNote->branch && $debitNote->branch->bank_country)
                                         <tr>
                                             <td class="pe-4">Country:</td>
                                             <td>{{ $debitNote->branch->bank_country }}</td>
                                         </tr>
                                     @endif
-                                    @if($debitNote->branch && $debitNote->branch->iban)
+                                    @if ($debitNote->branch && $debitNote->branch->iban)
                                         <tr>
                                             <td class="pe-4">IBAN:</td>
                                             <td>{{ $debitNote->branch->iban }}</td>
                                         </tr>
                                     @endif
-                                    @if($debitNote->branch && $debitNote->branch->swift_code)
+                                    @if ($debitNote->branch && $debitNote->branch->swift_code)
                                         <tr>
                                             <td class="pe-4">SWIFT code:</td>
                                             <td>{{ $debitNote->branch->swift_code }}</td>
@@ -161,9 +158,9 @@
                                 </td>
                                 <td class="px-0 py-6 w-px-100">
                                     <p class="mb-2">Subtotal:</p>
-                                    @if($debitNote->document_discount_amount > 0)
-                                        <p class="mb-2">Discount 
-                                            @if($debitNote->document_discount_type == 1 && $debitNote->document_discount_rate)
+                                    @if ($debitNote->document_discount_amount > 0)
+                                        <p class="mb-2">Discount
+                                            @if ($debitNote->document_discount_type == 1 && $debitNote->document_discount_rate)
                                                 ({{ $debitNote->document_discount_rate }}%)
                                             @endif:
                                         </p>
@@ -173,11 +170,15 @@
                                 </td>
                                 <td class="text-end px-0 py-6 w-px-100 fw-medium text-heading">
                                     <p class="fw-medium mb-2">${{ number_format($debitNote->sub_total, 2) }}</p>
-                                    @if($debitNote->document_discount_amount > 0)
-                                        <p class="fw-medium mb-2">-${{ number_format($debitNote->document_discount_amount, 2) }}</p>
+                                    @if ($debitNote->document_discount_amount > 0)
+                                        <p class="fw-medium mb-2">
+                                            -${{ number_format($debitNote->document_discount_amount, 2) }}</p>
                                     @endif
-                                    <p class="fw-medium mb-2 border-bottom pb-2">${{ number_format($debitNote->tax_amount ?? 0, 2) }}</p>
-                                    <p class="fw-medium mb-0">${{ number_format($debitNote->sub_total - ($debitNote->document_discount_amount ?? 0) + ($debitNote->tax_amount ?? 0), 2) }}</p>
+                                    <p class="fw-medium mb-2 border-bottom pb-2">
+                                        ${{ number_format($debitNote->tax_amount ?? 0, 2) }}</p>
+                                    <p class="fw-medium mb-0">
+                                        ${{ number_format($debitNote->sub_total - ($debitNote->document_discount_amount ?? 0) + ($debitNote->tax_amount ?? 0), 2) }}
+                                    </p>
                                 </td>
                             </tr>
                         </tbody>
@@ -213,7 +214,8 @@
                             href="{{ route('billing.debit-notes.print', $debitNote->id) }}">
                             Print
                         </a>
-                        <a href="{{ route('billing.debit-notes.edit', $debitNote->id) }}" class="btn btn-label-secondary d-grid w-100">
+                        <a href="{{ route('billing.debit-notes.edit', $debitNote->id) }}"
+                            class="btn btn-label-secondary d-grid w-100">
                             Edit </a>
                     </div>
                     <button class="btn btn-danger d-grid w-100" onclick="confirmDelete()">
@@ -229,7 +231,7 @@
     @include('_partials/_offcanvas/offcanvas-send-invoice')
     <!-- /Offcanvas -->
 @endsection
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     function confirmDelete() {
@@ -249,7 +251,8 @@
     }
 </script>
 
-<form id="delete-form" action="{{ route('billing.debit-notes.destroy', $debitNote->id) }}" method="POST" style="display: none;">
+<form id="delete-form" action="{{ route('billing.debit-notes.destroy', $debitNote->id) }}" method="POST"
+    style="display: none;">
     @csrf
     @method('DELETE')
 </form>

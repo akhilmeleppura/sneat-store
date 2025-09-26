@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Accounting\App\Models\MainCategory;
 use Modules\Accounting\App\Models\SubCategory;
-use Illuminate\Support\Facades\DB; 
+use Illuminate\Support\Facades\DB;
 use App\Helpers\HS\Reply;
 use Modules\Accounting\Services\MenuService;
 
@@ -19,8 +19,8 @@ class SubCategoryController extends Controller
      */
     public function index()
     {
-         $currentRoute = request()->route()->getName();
-    $menu = MenuService::getMenu($currentRoute);
+        $currentRoute = request()->route()->getName();
+        $menu = MenuService::getMenu($currentRoute);
 
         $subCategories = SubCategory::with('mainCategory')->get();
         $mainCategories = MainCategory::all();
@@ -44,31 +44,31 @@ class SubCategoryController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
-  public function store(Request $request)
-{
-    try {
-        DB::beginTransaction();
+    public function store(Request $request)
+    {
+        try {
+            DB::beginTransaction();
 
-        $validated = $request->validate([
-            'main_category_id' => 'required|exists:accounting_main_categories,id',
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-        ]);
+            $validated = $request->validate([
+                'main_category_id' => 'required|exists:accounting_main_categories,id',
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+            ]);
 
-        SubCategory::create($validated);
+            SubCategory::create($validated);
 
-        DB::commit();
+            DB::commit();
 
-        return Reply::success('Subcategory added successfully.');
-    } catch (\Exception $e) {
-        DB::rollBack();
-        report($e);
-        return Reply::error(
-            'Failed to store subcategory. Error: ' . $e->getMessage(),
-            500
-        );
+            return Reply::success('Subcategory added successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            report($e);
+            return Reply::error(
+                'Failed to store subcategory. Error: ' . $e->getMessage(),
+                500
+            );
+        }
     }
-}
 
 
     /**

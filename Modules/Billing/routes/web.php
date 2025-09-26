@@ -1,16 +1,17 @@
 <?php
+
 use Illuminate\Support\Facades\Route;
 use Modules\Billing\App\Http\Controllers\BillingController;
-use Modules\Billing\App\Http\Controllers\InvoiceController;
+use Modules\Billing\App\Http\Controllers\Invoices\InvoiceController;
 use Modules\Billing\App\Http\Controllers\CreditNotes\CreditNoteController;
 use Modules\Billing\App\Http\Controllers\DebitNotes\DebitNoteController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
   Route::prefix('accounting/billings')->group(function () {
     // Main billing routes
-    Route::get('/', [BillingController::class, 'index'])->name('accounting.billings.index');
-    Route::get('/invoices/add', [BillingController::class, 'create'])->name('accounting.billings.create');
-        Route::get('/invoices/{invoice}/edit', [BillingController::class, 'edit'])->name('billing.invoices.edit');
+    Route::get('/', [InvoiceController::class, 'index'])->name('accounting.billings.index');
+    Route::get('/invoices/add', [InvoiceController::class, 'create'])->name('accounting.billings.create');
+    Route::get('/invoices/{invoice}/edit', [InvoiceController::class, 'edit'])->name('billing.invoices.edit');
 
     // Invoice routes
     Route::post('/store', [InvoiceController::class, 'store'])->name('billing.invoices.store');
@@ -20,7 +21,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/invoices/{id}/download', [InvoiceController::class, 'download'])->name('billing.invoices.download');
     Route::get('/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('billing.invoices.print');
     Route::put('invoices/{id}', [InvoiceController::class, 'update'])->name('billing.invoices.update');
-    
+
     // Debit Note routes
     Route::get('/debit-notes', [DebitNoteController::class, 'index'])->name('billing.debit-notes.index');
     Route::get('/debit-notes/list', [DebitNoteController::class, 'getDebitNotes'])->name('billing.debit-notes.list');
@@ -31,10 +32,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/debit-notes/{id}', [DebitNoteController::class, 'update'])->name('billing.debit-notes.update');
     Route::delete('/debit-notes/{id}', [DebitNoteController::class, 'destroy'])->name('billing.debit-notes.destroy');
     Route::get('/debit-notes/{id}/download', [DebitNoteController::class, 'download'])
-    ->name('billing.debit-notes.download');
+      ->name('billing.debit-notes.download');
 
-Route::get('/debit-notes/{id}/print', [DebitNoteController::class, 'print'])
-    ->name('billing.debit-notes.print');
+    Route::get('/debit-notes/{id}/print', [DebitNoteController::class, 'print'])
+      ->name('billing.debit-notes.print');
 
     // Credit Note routes
     Route::get('/credit-notes', [CreditNoteController::class, 'index'])->name('billing.credit-notes.index');
@@ -45,8 +46,8 @@ Route::get('/debit-notes/{id}/print', [DebitNoteController::class, 'print'])
     Route::get('/credit-notes/{id}/edit', [CreditNoteController::class, 'edit'])->name('billing.credit-notes.edit');
     Route::put('/credit-notes/{id}', [CreditNoteController::class, 'update'])->name('billing.credit-notes.update');
     Route::delete('/credit-notes/{id}', [CreditNoteController::class, 'destroy'])->name('billing.credit-notes.destroy');
-     Route::get('/credit-notes/{id}/download', [CreditNoteController::class, 'download'])->name('billing.credit-notes.download');
-         Route::get('/credit-notes/{id}/print', [CreditNoteController::class, 'print'])->name('billing.credit-notes.print');
+    Route::get('/credit-notes/{id}/download', [CreditNoteController::class, 'download'])->name('billing.credit-notes.download');
+    Route::get('/credit-notes/{id}/print', [CreditNoteController::class, 'print'])->name('billing.credit-notes.print');
 
     // Generic routes (moved to the end to avoid conflicts)
     Route::get('/{id}', [BillingController::class, 'show'])->name('billings.show');

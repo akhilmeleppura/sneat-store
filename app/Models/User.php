@@ -17,7 +17,7 @@ class User extends Authenticatable
 {
     use HasRoles;
     use HasApiTokens;
-    protected $guard_name = 'web'; 
+    protected $guard_name = 'web';
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
@@ -35,10 +35,10 @@ class User extends Authenticatable
         'email',
         'password',
         'role_id',
-    'is_super_admin',
-    'is_supre_admin',
-    'company_id',
-    'branch_id',
+        'is_super_admin',
+        'is_supre_admin',
+        'company_id',
+        'branch_id',
     ];
 
     /**
@@ -63,13 +63,13 @@ class User extends Authenticatable
     ];
 
     public function company()
-{
-    return $this->belongsTo(Company::class);
-}
-public function branch()
-{
-    return $this->belongsTo(Branch::class);
-}
+    {
+        return $this->belongsTo(Company::class);
+    }
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
     /**
      * Get the attributes that should be cast.
      *

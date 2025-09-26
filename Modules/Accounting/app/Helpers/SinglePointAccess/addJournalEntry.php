@@ -13,7 +13,7 @@ if (!function_exists('addJournalEntry')) {
             'description'         => $entryData['description'] ?? null,
         ]);
 
-        
+
         return $entry;
     }
 }

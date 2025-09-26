@@ -15,7 +15,7 @@ class BillingCreditNote extends Model
     use HasFactory;
 
     protected $table = 'billing_credit_notes';
-    
+
     protected $fillable = [
         'document_prefix',
         'document_number',
@@ -71,11 +71,11 @@ class BillingCreditNote extends Model
         return $this->belongsTo('App\Models\User', 'updated_by');
     }
 
-       public function company()
+    public function company()
     {
         return $this->belongsTo(Company::class, 'company_id');
     }
-        public function branch()
+    public function branch()
     {
         return $this->belongsTo(Branch::class, 'branch_id');
     }

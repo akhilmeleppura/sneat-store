@@ -20,42 +20,44 @@ document.addEventListener('DOMContentLoaded', function () {
       fetch(`${baseUrl}${ajaxUrl}/${user_id}/edit`)
         .then(response => response.json())
         .then(data => {
-  document.getElementById('user_id').value = data.id ?? '';
+          document.getElementById('user_id').value = data.id ?? '';
 
-  document.querySelectorAll('#addNewUserForm input, #addNewUserForm select').forEach(field => {
-    const name = field.name;
-    if (data.hasOwnProperty(name)) {
-      if ($(field).hasClass('select2-hidden-accessible')) {
-        $(field).val(data[name]).trigger('change');
-      } else {
-        field.value = data[name] ?? '';
-      }
-    } else {
-      field.value = '';
-      if ($(field).hasClass('select2-hidden-accessible')) {
-        $(field).val('').trigger('change');
-      }
-    }
-  });
+          document.querySelectorAll('#addNewUserForm input, #addNewUserForm select').forEach(field => {
+            const name = field.name;
+            if (data.hasOwnProperty(name)) {
+              if ($(field).hasClass('select2-hidden-accessible')) {
+                $(field).val(data[name]).trigger('change');
+              } else {
+                field.value = data[name] ?? '';
+              }
+            } else {
+              field.value = '';
+              if ($(field).hasClass('select2-hidden-accessible')) {
+                $(field).val('').trigger('change');
+              }
+            }
+          });
 
-  // ✅ Role select field (if needed)
-  if (data.role || data.role_id) {
-    $('#role').val(data.role_id ?? data.role).trigger('change');
-  }
+          // ✅ Role select field (if needed)
+          if (data.role || data.role_id) {
+            $('#role')
+              .val(data.role_id ?? data.role)
+              .trigger('change');
+          }
 
-  // ✅ Set is_super_admin if visible
-  const superAdminField = document.getElementById('is_super_admin');
-  if (superAdminField && data.hasOwnProperty('is_super_admin')) {
-    const value = String(data.is_super_admin) === '1' ? '1' : '0';
-    superAdminField.value = value;
-    superAdminField.dispatchEvent(new Event('change', { bubbles: true }));
-  }
+          // ✅ Set is_super_admin if visible
+          const superAdminField = document.getElementById('is_super_admin');
+          if (superAdminField && data.hasOwnProperty('is_super_admin')) {
+            const value = String(data.is_super_admin) === '1' ? '1' : '0';
+            superAdminField.value = value;
+            superAdminField.dispatchEvent(new Event('change', { bubbles: true }));
+          }
 
-  // ✅ Show the offcanvas
-  const offcanvasEl = document.getElementById('offcanvasAddUser');
-  const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
-  bsOffcanvas.show();
-})
+          // ✅ Show the offcanvas
+          const offcanvasEl = document.getElementById('offcanvasAddUser');
+          const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+          bsOffcanvas.show();
+        })
 
         .catch(err => {
           console.error('Edit fetch failed:', err);

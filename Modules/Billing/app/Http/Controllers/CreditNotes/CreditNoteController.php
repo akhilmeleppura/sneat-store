@@ -16,7 +16,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Helpers\HS\Reply;
-    
+use Modules\General\App\Models\DocumentTemplate;
+use Modules\General\App\Models\Template;
+
+
 class CreditNoteController extends Controller
 {
     public function index()
@@ -189,25 +192,35 @@ class CreditNoteController extends Controller
         }
     }
 
-public function show($id)
-{
-    $creditNote = BillingCreditNote::with(['items.item', 'items.tax', 'invoice', 'createdBy', 'company', 'branch'])->findOrFail($id);
-    
-    // Get branch logo
-    $branchLogo = null;
-    if ($creditNote->branch) {
-        $extensions = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'];
-        foreach ($extensions as $ext) {
-            $path = public_path('storage/branch_logos/' . $creditNote->branch->id . '.' . $ext);
-            if (file_exists($path)) {
-                $branchLogo = asset('storage/branch_logos/' . $creditNote->branch->id . '.' . $ext);
-                break;
+    public function show($id)
+    {
+        $creditNote = BillingCreditNote::with(['items.item', 'items.tax', 'invoice', 'createdBy', 'company', 'branch'])->findOrFail($id);
+
+        // Get branch logo
+        $branchLogo = null;
+        if ($creditNote->branch) {
+            $extensions = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'];
+            foreach ($extensions as $ext) {
+                $path = public_path('storage/branch_logos/' . $creditNote->branch->id . '.' . $ext);
+                if (file_exists($path)) {
+                    $branchLogo = asset('storage/branch_logos/' . $creditNote->branch->id . '.' . $ext);
+                    break;
+                }
             }
         }
+        $branchId = $creditNote->items->first()?->branch_id;
+
+        // Fetch the template directly from DocumentTemplate
+        $template = DocumentTemplate::where('company_id', auth()->user()->company_id)
+            ->where('branch_id', $branchId)
+            ->where('type', 'invoice')
+            ->first();
+
+        // Use the path from the fetched template, fallback to default
+        $templateView = Template::find($template?->template_id)?->path ?? 'HS.Templates.standard_header_footer';
+
+        return view('billing::credit-notes.show', compact('creditNote', 'branchLogo', 'templateView', 'template'));
     }
-    
-    return view('billing::credit-notes.show', compact('creditNote', 'branchLogo'));
-}
 
     public function edit($id)
     {
@@ -379,23 +392,22 @@ public function show($id)
     }
 
     public function download($id)
-{
-    $creditNote = BillingCreditNote::with(['items', 'customer', 'invoice'])->findOrFail($id);
+    {
+        $creditNote = BillingCreditNote::with(['items', 'customer', 'invoice'])->findOrFail($id);
 
-    // Example: return a PDF
-    $pdf = \PDF::loadView('billing.credit-notes.pdf', compact('creditNote'));
-    return $pdf->download('CreditNote-' . $creditNote->credit_note_number . '.pdf');
-}
-public function print($id)
-{
-    $creditNote = BillingCreditNote::with(['items', 'customer', 'invoice'])->findOrFail($id);
+        // Example: return a PDF
+        $pdf = \PDF::loadView('billing.credit-notes.pdf', compact('creditNote'));
+        return $pdf->download('CreditNote-' . $creditNote->credit_note_number . '.pdf');
+    }
+    public function print($id)
+    {
+        $creditNote = BillingCreditNote::with(['items', 'customer', 'invoice'])->findOrFail($id);
 
-    // You can either return a blade view that’s print-optimized:
-    return view('billing.credit-notes.print', compact('creditNote'));
+        // You can either return a blade view that’s print-optimized:
+        return view('billing.credit-notes.print', compact('creditNote'));
 
-    // OR if you want a PDF instead:
-    // $pdf = \PDF::loadView('billing.credit-notes.pdf', compact('creditNote'));
-    // return $pdf->stream('CreditNote-' . $creditNote->credit_note_number . '.pdf');
-}
-
+        // OR if you want a PDF instead:
+        // $pdf = \PDF::loadView('billing.credit-notes.pdf', compact('creditNote'));
+        // return $pdf->stream('CreditNote-' . $creditNote->credit_note_number . '.pdf');
+    }
 }

@@ -36,7 +36,7 @@ class MenuController extends Controller
                             'url'  => 'accounting/ledger',
                             'permissions' => 'user.view'
                         ],
-                         [
+                        [
                             'name' => 'Trial Balance',
                             'slug' => 'accounting.trial-balance.index',
                             'url'  => 'accounting/trial-balance',

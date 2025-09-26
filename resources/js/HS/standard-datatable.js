@@ -16,7 +16,7 @@ function columnTypeRenderer(type, data) {
       return renderVerification(data);
     case 'nameWithAvatar':
       return renderNameWithAvatar(data);
-      case 'text': 
+    case 'text':
       return renderText(data);
 
     default:
@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (config && config.type) {
         columnDefs.push({
-          targets: index+1,
+          targets: index + 1,
           render: function (data, type, full, meta) {
             return columnTypeRenderer(config.type, full);
           },
