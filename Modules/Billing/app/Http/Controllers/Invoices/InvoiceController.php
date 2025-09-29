@@ -340,11 +340,12 @@ class InvoiceController extends Controller
                             'description'        => $itemData['description'] ?? '',
                             'quantity'           => $itemData['quantity'],
                             'selling_unit_price' => $itemData['unit_price'],
-                            'tax_id'             = $itemData['tax_id'] ?? null,
-                            'discount_rate'      = $itemData['discount_percent'] ?? 0,
-                            'subtotal'           = $itemData['total_price'],
+                            'tax_id'             => $itemData['tax_id'] ?? null,
+                            'discount_rate'      => $itemData['discount_percent'] ?? 0,
+                            'subtotal'           => $itemData['total_price'],
                             'company_id'         => auth()->user()->company_id,
                             'branch_id'          => auth()->user()->branch_id,
+
                         ]);
                     }
                 }
