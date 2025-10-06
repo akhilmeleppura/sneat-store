@@ -27,6 +27,23 @@ use Modules\General\App\Models\Template;
 class InvoiceController extends Controller
 {
     /**
+     * Search items for autocomplete
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function searchItems(Request $request)
+    {
+        $query = $request->get('q', '');
+        $items = BillingItem::query()
+            ->where('name', 'like', "%$query%")
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get(['id', 'name', 'selling_unit_price']);
+        return response()->json($items);
+    }
+
+    /**
      * Display a listing of the invoices.
      *
      * @return \Illuminate\View\View
@@ -51,6 +68,7 @@ class InvoiceController extends Controller
             ->select([
                 'billing_invoices.id',
                 'billing_invoices.customer_id',
+                'billing_invoices.document_prefix',
                 'billing_invoices.document_number',
                 'billing_invoices.issue_date',
                 'billing_invoices.sub_total',
@@ -63,6 +81,7 @@ class InvoiceController extends Controller
         if ($search = $request->input('search.value')) {
             $query->where(function ($q) use ($search) {
                 $q->where('document_number', 'like', "%$search%")
+                    ->orWhere('document_prefix', 'like', "%$search%")
                     ->orWhereHas('customer', function ($q2) use ($search) {
                         $q2->where('name', 'like', "%$search%")
                             ->orWhere('email', 'like', "%$search%");
@@ -72,19 +91,23 @@ class InvoiceController extends Controller
 
         $start  = $request->input('start', 0);
         $length = $request->input('length', 1000);
+
         $recordsTotal = BillingInvoice::count();
         $recordsFiltered = $query->count();
+
         $invoices = $query->skip($start)->take($length)->get();
 
         $data = $invoices->map(function ($invoice) {
             return [
-                'invoice_id'      => $invoice->id,
-                'invoice_status'  => $invoice->payment_status,
-                'issued_date'     => $invoice->issue_date ? $invoice->issue_date->format('Y-m-d') : '',
-                'client_name'     => $invoice->customer->name ?? 'Unknown',
-                'total'           => $invoice->sub_total,
-                'balance'         => $invoice->balance,
-                'action'          => '',
+                'invoice_id'        => $invoice->id,
+                'invoice_status'    => $invoice->payment_status,
+                'issued_date'       => $invoice->issue_date ? $invoice->issue_date->format('Y-m-d') : '',
+                'client_name'       => $invoice->customer->name ?? 'Unknown',
+                'total'             => $invoice->sub_total,
+                'balance'           => $invoice->balance,
+                'document_prefix'   => $invoice->document_prefix ?? '',
+                'document_number'   => $invoice->document_number ?? '',
+                'action'            => '',
             ];
         });
 
@@ -247,7 +270,7 @@ class InvoiceController extends Controller
                 'document_discount_type'   => $request->document_discount_type,
                 'document_discount_rate'   => $request->document_discount_rate,
                 'document_discount_amount' => $request->document_discount_amount,
-                'document_tax_id'      => $request->tax_id,
+                'document_tax_id'          => $request->tax_id,
             ]);
 
             foreach ($request->items as $item) {
@@ -256,9 +279,9 @@ class InvoiceController extends Controller
                     'item_id'            => $item['item_id'],
                     'quantity'           => $item['quantity'],
                     'selling_unit_price' => $item['unit_price'],
-                    'tax_id'              => $item['tax_id'],
-                    'discount_rate' => $item['discount_percent'],
-                    'subtotal' => $item['total_price'],
+                    'tax_id'             => $item['tax_id'],
+                    'discount_rate'      => $item['discount_percent'],
+                    'subtotal'           => $item['total_price'],
                     'company_id'         => $user->company_id,
                     'branch_id'          => $user->branch_id,
                 ]);
@@ -286,7 +309,7 @@ class InvoiceController extends Controller
             'issue_date' => 'required|date',
             'due_date' => 'required|date|after_or_equal:issue_date',
             'existing_items' => 'sometimes|array',
-            'existing_items.*.id' => 'required|exists:billing_invoice_items,id',
+            'existing_items.*.id' => 'required|exists:billing_invoices_items,id',
             'existing_items.*.item_id' => 'required|exists:billing_items,id',
             'existing_items.*.quantity' => 'required|numeric|min:0.01',
             'existing_items.*.unit_price' => 'required|numeric|min:0',
@@ -345,7 +368,6 @@ class InvoiceController extends Controller
                             'subtotal'           => $itemData['total_price'],
                             'company_id'         => auth()->user()->company_id,
                             'branch_id'          => auth()->user()->branch_id,
-
                         ]);
                     }
                 }

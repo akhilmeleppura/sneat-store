@@ -18,13 +18,30 @@ use App\Helpers\HS\Reply;
 use Modules\General\App\Models\DocumentTemplate;
 use Modules\General\App\Models\Template;
 
+/**
+ * DebitNoteController - Handles all debit note related operations
+ * 
+ * This controller manages the CRUD operations for debit notes, including
+ * displaying debit note lists, creating, editing, updating, and deleting debit notes.
+ */
 class DebitNoteController extends Controller
 {
+    /**
+     * Display a listing of the debit notes.
+     *
+     * @return \Illuminate\View\View
+     */
     public function index()
     {
         return view('billing::debit-notes.index');
     }
 
+    /**
+     * Get debit notes for DataTables.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getDebitNotes(Request $request)
     {
         $query = BillingDebitNote::with(['customer' => function ($query) {
@@ -32,7 +49,8 @@ class DebitNoteController extends Controller
         }])
             ->select([
                 'billing_debit_notes.id',
-                'billing_debit_notes.customer_id', // ✅ include customer_id
+                'billing_debit_notes.customer_id',
+                'billing_debit_notes.document_prefix',
                 'billing_debit_notes.document_number',
                 'billing_debit_notes.issue_date',
                 'billing_debit_notes.sub_total',
@@ -45,6 +63,7 @@ class DebitNoteController extends Controller
         if ($search = $request->input('search.value')) {
             $query->where(function ($q) use ($search) {
                 $q->where('document_number', 'like', "%$search%")
+                    ->orWhere('document_prefix', 'like', "%$search%")
                     ->orWhereHas('customer', function ($q2) use ($search) {
                         $q2->where('name', 'like', "%$search%")
                             ->orWhere('email', 'like', "%$search%");
@@ -63,9 +82,11 @@ class DebitNoteController extends Controller
                 'debit_note_id'     => $debitNote->id,
                 'debit_note_status' => $debitNote->payment_status,
                 'issued_date'       => $debitNote->issue_date ? $debitNote->issue_date->format('Y-m-d') : '',
-                'client_name'       => $debitNote->customer->name ?? 'Unknown', // ✅ added like credit notes
+                'client_name'       => $debitNote->customer->name ?? 'Unknown',
                 'total'             => $debitNote->sub_total,
                 'balance'           => $debitNote->balance,
+                'document_prefix'   => $debitNote->document_prefix ?? '',
+                'document_number'   => $debitNote->document_number ?? '',
                 'action'            => '',
             ];
         });
@@ -78,18 +99,35 @@ class DebitNoteController extends Controller
         ]);
     }
 
+    /**
+     * Show the form for creating a new debit note.
+     *
+     * @return \Illuminate\View\View
+     */
     public function create()
     {
         return $this->formData();
     }
 
+    /**
+     * Show the form for creating a new debit note based on an existing invoice.
+     *
+     * @param int $invoiceId
+     * @return \Illuminate\View\View
+     */
     public function createWithInvoice($invoiceId)
     {
         $invoice = BillingInvoice::findOrFail($invoiceId);
         return $this->formData($invoice);
     }
 
-    private function formData($invoice = null)
+    /**
+     * Prepare form data for creating/editing debit notes.
+     *
+     * @param BillingInvoice|null $invoice
+     * @return \Illuminate\View\View
+     */
+    private function formData(BillingInvoice $invoice = null)
     {
         $debitNote = new BillingDebitNote();
         $user = auth()->user();
@@ -112,6 +150,11 @@ class DebitNoteController extends Controller
         ));
     }
 
+    /**
+     * Generate the next debit note number.
+     *
+     * @return string
+     */
     private function getNextDebitNoteNumber(): string
     {
         $last = BillingDebitNote::latest('id')->first();
@@ -123,6 +166,12 @@ class DebitNoteController extends Controller
         return 'DN-0001';
     }
 
+    /**
+     * Parse document number into prefix and number components.
+     *
+     * @param string $docNumber
+     * @return array
+     */
     private function parseDocumentNumber(string $docNumber): array
     {
         if (preg_match('/^([A-Za-z]+)-(\d+)$/', $docNumber, $matches)) {
@@ -131,6 +180,12 @@ class DebitNoteController extends Controller
         return ['DN', '0001'];
     }
 
+    /**
+     * Calculate subtotal for debit note items.
+     *
+     * @param array $items
+     * @return float
+     */
     private function calculateSubtotal(array $items): float
     {
         return collect($items)->sum(function ($item) {
@@ -141,6 +196,12 @@ class DebitNoteController extends Controller
         });
     }
 
+    /**
+     * Store a newly created debit note in storage.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -174,7 +235,7 @@ class DebitNoteController extends Controller
                 'document_prefix'          => $prefix,
                 'document_number'          => $number,
                 'invoice_id'               => $request->invoice_id,
-                'customer_id'              => $customerId, // Add this line
+                'customer_id'              => $customerId,
                 'issue_date'               => $request->issue_date,
                 'due_date'                 => $request->due_date,
                 'sub_total'                => $subTotal,
@@ -211,9 +272,16 @@ class DebitNoteController extends Controller
         }
     }
 
+    /**
+     * Display the specified debit note.
+     *
+     * @param int $id
+     * @return \Illuminate\View\View
+     */
     public function show($id)
     {
-        $debitNote = BillingDebitNote::with(['items.item', 'items.tax', 'invoice', 'createdBy', 'company', 'branch'])->findOrFail($id);
+        $debitNote = BillingDebitNote::with(['items.item', 'items.tax', 'invoice', 'createdBy', 'company', 'branch'])
+            ->findOrFail($id);
 
         // Get branch logo
         $branchLogo = null;
@@ -239,9 +307,20 @@ class DebitNoteController extends Controller
         // Use the path from the fetched template, fallback to default
         $templateView = Template::find($template?->template_id)?->path ?? 'HS.Templates.standard_header_footer';
 
-        return view('billing::debit-notes.show', compact('debitNote', 'branchLogo', 'templateView', 'template'));
+        return view('billing::debit-notes.show', compact(
+            'debitNote',
+            'branchLogo',
+            'templateView',
+            'template'
+        ));
     }
 
+    /**
+     * Show the form for editing the specified debit note.
+     *
+     * @param int $id
+     * @return \Illuminate\View\View
+     */
     public function edit($id)
     {
         $debitNote = BillingDebitNote::findOrFail($id);
@@ -264,6 +343,13 @@ class DebitNoteController extends Controller
         ));
     }
 
+    /**
+     * Update the specified debit note in storage.
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -296,7 +382,7 @@ class DebitNoteController extends Controller
             }
 
             $debitNote->invoice_id               = $request->invoice_id;
-            $debitNote->customer_id              = $customerId; // Add this line
+            $debitNote->customer_id              = $customerId;
             $debitNote->issue_date               = $request->issue_date;
             $debitNote->due_date                 = $request->due_date;
             $debitNote->sub_total                = $this->calculateSubtotal($request->items ?? $request->existing_items ?? []);
@@ -355,6 +441,12 @@ class DebitNoteController extends Controller
         }
     }
 
+    /**
+     * Remove the specified debit note from storage.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function destroy($id)
     {
         try {
@@ -373,6 +465,12 @@ class DebitNoteController extends Controller
         }
     }
 
+    /**
+     * Download the specified debit note as a PDF.
+     *
+     * @param int $id
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
     public function download($id)
     {
         $debitNote = BillingDebitNote::with(['items', 'company', 'branch'])->findOrFail($id);
@@ -381,6 +479,12 @@ class DebitNoteController extends Controller
         return $pdf->download("DebitNote-{$debitNote->id}.pdf");
     }
 
+    /**
+     * Show the print view for the specified debit note.
+     *
+     * @param int $id
+     * @return \Illuminate\View\View
+     */
     public function print($id)
     {
         $debitNote = BillingDebitNote::with(['items', 'company', 'branch'])->findOrFail($id);

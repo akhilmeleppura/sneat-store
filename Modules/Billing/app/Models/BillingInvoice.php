@@ -37,49 +37,72 @@ class BillingInvoice extends Model
 
     public $timestamps = true;
 
-    /**
-     * Belongs to customer
-     */
+    /* ----------------------
+       Relationships
+    ---------------------- */
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
-    /**
-     * Has many items (with billingItem relation inside)
-     */
     public function items()
     {
         return $this->hasMany(BillingInvoiceItem::class, 'document_id');
     }
 
-    /**
-     * Has many debit notes
-     */
     public function debitNotes()
     {
         return $this->hasMany(BillingDebitNote::class, 'invoice_id');
     }
 
-    /**
-     * Has many credit notes
-     */
     public function creditNotes()
     {
         return $this->hasMany(BillingCreditNote::class, 'invoice_id');
     }
 
-    /**
-     * Belongs to payment status
-     */
     public function status()
     {
         return $this->belongsTo(BillingPaymentStatus::class, 'payment_status', 'value');
     }
 
-    /**
-     * Payment status label accessor
-     */
+    public function template()
+    {
+        return $this->belongsTo(DocumentTemplate::class, 'template_id');
+    }
+
+    /* ----------------------
+       Computed Attributes
+    ---------------------- */
+
+    // Total of all item taxes
+    public function getTotalTaxAttribute()
+    {
+        return $this->items->sum(fn($item) => $item->tax_amount);
+    }
+
+    // Total of all item discounts
+    public function getTotalItemDiscountAttribute()
+    {
+        return $this->items->sum(fn($item) => $item->discount_amount);
+    }
+
+    // Total after document-level discount
+    public function getTotalAfterDiscountAttribute()
+    {
+        $subtotal = $this->sub_total;
+        $discount = $this->document_discount_amount ?? 0;
+        return $subtotal - $discount;
+    }
+
+    // Grand total (subtotal - doc discount + taxes)
+    public function getGrandTotalAttribute()
+    {
+        return $this->total_after_discount + $this->total_tax;
+    }
+
+    /* ----------------------
+       Accessors for labels
+    ---------------------- */
     public function getPaymentStatusLabelAttribute()
     {
         return match ($this->payment_status) {
@@ -90,9 +113,6 @@ class BillingInvoice extends Model
         };
     }
 
-    /**
-     * Discount type label accessor
-     */
     public function getDiscountTypeLabelAttribute()
     {
         return match ($this->document_discount_type) {
@@ -100,13 +120,5 @@ class BillingInvoice extends Model
             2 => 'Fixed Amount',
             default => 'None',
         };
-    }
-
-    /**
-     * Belongs to document template
-     */
-    public function template()
-    {
-        return $this->belongsTo(DocumentTemplate::class, 'template_id');
     }
 }

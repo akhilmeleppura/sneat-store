@@ -21,6 +21,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/invoices/{id}/download', [InvoiceController::class, 'download'])->name('billing.invoices.download');
     Route::get('/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('billing.invoices.print');
     Route::put('invoices/{id}', [InvoiceController::class, 'update'])->name('billing.invoices.update');
+    Route::get('/billing/items/search', [InvoiceController::class, 'searchItems'])->name('billing.items.search');
+
 
     // Debit Note routes
     Route::get('/debit-notes', [DebitNoteController::class, 'index'])->name('billing.debit-notes.index');

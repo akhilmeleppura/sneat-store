@@ -19,14 +19,30 @@ use App\Helpers\HS\Reply;
 use Modules\General\App\Models\DocumentTemplate;
 use Modules\General\App\Models\Template;
 
-
+/**
+ * CreditNoteController - Handles all credit note related operations
+ * 
+ * This controller manages the CRUD operations for credit notes, including
+ * displaying credit note lists, creating, editing, updating, and deleting credit notes.
+ */
 class CreditNoteController extends Controller
 {
+    /**
+     * Display the credit notes index page.
+     *
+     * @return \Illuminate\View\View
+     */
     public function index()
     {
         return view('billing::credit-notes.index');
     }
 
+    /**
+     * Get credit notes for DataTables.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getCreditNotes(Request $request)
     {
         $query = BillingCreditNote::with(['customer' => function ($query) {
@@ -35,6 +51,7 @@ class CreditNoteController extends Controller
             ->select([
                 'billing_credit_notes.id',
                 'billing_credit_notes.customer_id',
+                'billing_credit_notes.document_prefix',
                 'billing_credit_notes.document_number',
                 'billing_credit_notes.issue_date',
                 'billing_credit_notes.sub_total',
@@ -47,6 +64,7 @@ class CreditNoteController extends Controller
         if ($search = $request->input('search.value')) {
             $query->where(function ($q) use ($search) {
                 $q->where('document_number', 'like', "%$search%")
+                    ->orWhere('document_prefix', 'like', "%$search%")
                     ->orWhereHas('customer', function ($q2) use ($search) {
                         $q2->where('name', 'like', "%$search%")
                             ->orWhere('email', 'like', "%$search%");
@@ -58,17 +76,20 @@ class CreditNoteController extends Controller
         $length = $request->input('length', 1000);
         $recordsTotal = BillingCreditNote::count();
         $recordsFiltered = $query->count();
+
         $creditNotes = $query->skip($start)->take($length)->get();
 
         $data = $creditNotes->map(function ($creditNote) {
             return [
-                'credit_note_id'  => $creditNote->id,
+                'credit_note_id'     => $creditNote->id,
                 'credit_note_status' => $creditNote->payment_status,
-                'issued_date'    => $creditNote->issue_date ? $creditNote->issue_date->format('Y-m-d') : '',
-                'client_name'    => $creditNote->customer->name ?? 'Unknown',
-                'total'          => $creditNote->sub_total,
-                'balance'        => $creditNote->balance,
-                'action'         => '',
+                'issued_date'        => $creditNote->issue_date ? $creditNote->issue_date->format('Y-m-d') : '',
+                'client_name'        => $creditNote->customer->name ?? 'Unknown',
+                'total'              => $creditNote->sub_total,
+                'balance'            => $creditNote->balance,
+                'document_prefix'    => $creditNote->document_prefix ?? '',
+                'document_number'    => $creditNote->document_number ?? '',
+                'action'             => '',
             ];
         });
 
@@ -80,32 +101,36 @@ class CreditNoteController extends Controller
         ]);
     }
 
+    /**
+     * Show the form for creating a new credit note.
+     *
+     * @return \Illuminate\View\View
+     */
     public function create()
     {
-        $creditNote = new BillingCreditNote();
-        $user = auth()->user();
-        $company = Company::find($user->company_id);
-        $branch = Branch::find($user->branch_id);
-        $items = BillingItem::all();
-        $taxes = Tax::all();
-        $invoices = BillingInvoice::with('customer')->get();
-
-        $nextCreditNoteNumber = $this->getNextCreditNoteNumber();
-
-        return view('billing::credit-notes.create', compact(
-            'creditNote',
-            'company',
-            'branch',
-            'items',
-            'taxes',
-            'invoices',
-            'nextCreditNoteNumber'
-        ));
+        return $this->formData();
     }
 
+    /**
+     * Show the form for creating a new credit note based on an existing invoice.
+     *
+     * @param int $invoiceId
+     * @return \Illuminate\View\View
+     */
     public function createWithInvoice($invoiceId)
     {
         $invoice = BillingInvoice::findOrFail($invoiceId);
+        return $this->formData($invoice);
+    }
+
+    /**
+     * Prepare form data for creating/editing credit notes.
+     *
+     * @param BillingInvoice|null $invoice
+     * @return \Illuminate\View\View
+     */
+    private function formData(BillingInvoice $invoice = null)
+    {
         $creditNote = new BillingCreditNote();
         $user = auth()->user();
         $company = Company::find($user->company_id);
@@ -113,7 +138,6 @@ class CreditNoteController extends Controller
         $items = BillingItem::all();
         $taxes = Tax::all();
         $invoices = BillingInvoice::with('customer')->get();
-
         $nextCreditNoteNumber = $this->getNextCreditNoteNumber();
 
         return view('billing::credit-notes.create', compact(
@@ -128,6 +152,28 @@ class CreditNoteController extends Controller
         ));
     }
 
+    /**
+     * Generate the next credit note number.
+     *
+     * @return string
+     */
+    private function getNextCreditNoteNumber(): string
+    {
+        $last = BillingCreditNote::latest('id')->first();
+        if ($last) {
+            $prefix = $last->document_prefix ?? 'CN';
+            $lastNumber = (int) filter_var($last->document_number, FILTER_SANITIZE_NUMBER_INT);
+            return $prefix . '-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+        }
+        return 'CN-0001';
+    }
+
+    /**
+     * Store a newly created credit note in storage.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -192,6 +238,12 @@ class CreditNoteController extends Controller
         }
     }
 
+    /**
+     * Display the specified credit note.
+     *
+     * @param int $id
+     * @return \Illuminate\View\View
+     */
     public function show($id)
     {
         $creditNote = BillingCreditNote::with(['items.item', 'items.tax', 'invoice', 'createdBy', 'company', 'branch'])->findOrFail($id);
@@ -219,9 +271,20 @@ class CreditNoteController extends Controller
         // Use the path from the fetched template, fallback to default
         $templateView = Template::find($template?->template_id)?->path ?? 'HS.Templates.standard_header_footer';
 
-        return view('billing::credit-notes.show', compact('creditNote', 'branchLogo', 'templateView', 'template'));
+        return view('billing::credit-notes.show', compact(
+            'creditNote',
+            'branchLogo',
+            'templateView',
+            'template'
+        ));
     }
 
+    /**
+     * Show the form for editing the specified credit note.
+     *
+     * @param int $id
+     * @return \Illuminate\View\View
+     */
     public function edit($id)
     {
         $creditNote = BillingCreditNote::findOrFail($id);
@@ -244,6 +307,13 @@ class CreditNoteController extends Controller
         ));
     }
 
+    /**
+     * Update the specified credit note in storage.
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -327,6 +397,12 @@ class CreditNoteController extends Controller
         }
     }
 
+    /**
+     * Remove the specified credit note from storage.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function destroy($id)
     {
         try {
@@ -334,6 +410,7 @@ class CreditNoteController extends Controller
             $creditNoteNumber = $creditNote->document_prefix . '-' . $creditNote->document_number;
             $creditNote->items()->delete();
             $creditNote->delete();
+
             return Reply::success("Credit Note {$creditNoteNumber} deleted successfully!");
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return Reply::notFound('The requested credit note was not found.');
@@ -343,6 +420,12 @@ class CreditNoteController extends Controller
         }
     }
 
+    /**
+     * Get invoice details for credit note creation.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getInvoiceDetails(Request $request)
     {
         $invoiceId = $request->input('invoice_id');
@@ -378,36 +461,35 @@ class CreditNoteController extends Controller
     }
 
     /**
-     * Helper to get the next credit note number
+     * Download the specified credit note as a PDF.
+     *
+     * @param int $id
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
      */
-    private function getNextCreditNoteNumber(): string
-    {
-        $lastCreditNote = BillingCreditNote::latest('id')->first();
-        if ($lastCreditNote) {
-            $prefix = $lastCreditNote->document_prefix ?? 'CN';
-            $lastNumber = (int) filter_var($lastCreditNote->document_number, FILTER_SANITIZE_NUMBER_INT);
-            return $prefix . '-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
-        }
-        return 'CN-0001';
-    }
-
     public function download($id)
     {
         $creditNote = BillingCreditNote::with(['items', 'customer', 'invoice'])->findOrFail($id);
 
-        // Example: return a PDF
+        // Example: generate PDF
         $pdf = \PDF::loadView('billing.credit-notes.pdf', compact('creditNote'));
-        return $pdf->download('CreditNote-' . $creditNote->credit_note_number . '.pdf');
+        return $pdf->download("CreditNote-" . $creditNote->document_number . ".pdf");
     }
+
+    /**
+     * Show the print view for the specified credit note.
+     *
+     * @param int $id
+     * @return \Illuminate\View\View
+     */
     public function print($id)
     {
         $creditNote = BillingCreditNote::with(['items', 'customer', 'invoice'])->findOrFail($id);
 
-        // You can either return a blade view that’s print-optimized:
+        // You can either return a blade view that's print-optimized:
         return view('billing.credit-notes.print', compact('creditNote'));
 
         // OR if you want a PDF instead:
         // $pdf = \PDF::loadView('billing.credit-notes.pdf', compact('creditNote'));
-        // return $pdf->stream('CreditNote-' . $creditNote->credit_note_number . '.pdf');
+        // return $pdf->stream('CreditNote-' . $creditNote->document_number . '.pdf');
     }
 }

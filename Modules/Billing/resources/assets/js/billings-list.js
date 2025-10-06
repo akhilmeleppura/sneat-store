@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
         { data: 'invoice_status' },
         { data: 'client_name' },
         { data: 'total' },
-        { data: 'issued_date' }, // ✅ fixed (was issue_date)
+        { data: 'issued_date' },
         { data: 'balance' },
         { data: 'invoice_status' },
         { data: 'action' }
@@ -40,11 +40,15 @@ document.addEventListener('DOMContentLoaded', function () {
         {
           targets: 2,
           render: function (data, type, full) {
-            return `<a href="${baseUrl}accounting/billings/invoices/${full['invoice_id']}">#${full['invoice_id']}</a>`;
+            // Show document_prefix + document_number instead of invoice_id
+            const docPrefix = full['document_prefix'] || '';
+            const docNumber = full['document_number'] || '';
+            const displayNumber = docPrefix + docNumber;
+
+            return `<a href="${baseUrl}accounting/billings/invoices/${full['invoice_id']}">#${displayNumber}</a>`;
           }
         },
         {
-          // Invoice Status with tooltip
           targets: 3,
           render: function (data, type, full) {
             const invoiceStatus = full['invoice_status'];
@@ -126,11 +130,11 @@ document.addEventListener('DOMContentLoaded', function () {
           targets: 6,
           render: function (data, type, full) {
             try {
-              const rawDate = full['issued_date']; // ✅ fixed
+              const rawDate = full['issued_date'];
               if (!rawDate) {
                 return '<span class="text-muted">Not set</span>';
               }
-              const dateOnly = rawDate.split(' ')[0]; // handles YYYY-MM-DD or YYYY-MM-DD HH:mm:ss
+              const dateOnly = rawDate.split(' ')[0];
               const issueDate = new Date(dateOnly);
               if (isNaN(issueDate.getTime())) {
                 return '<span class="text-muted">Invalid date</span>';

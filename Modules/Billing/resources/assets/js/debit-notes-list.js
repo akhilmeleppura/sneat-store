@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
         { data: 'debit_note_id', orderable: false, render: DataTable.render.select() },
         { data: 'debit_note_id' },
         { data: 'debit_note_status' },
-        { data: 'client_name' },   // ✅ show customer names
+        { data: 'client_name' }, // ✅ show customer names
         { data: 'total' },
         { data: 'issued_date' },
         { data: 'balance' },
@@ -38,7 +38,11 @@ document.addEventListener('DOMContentLoaded', function () {
         {
           targets: 2,
           render: function (data, type, full) {
-            return `<a href="${baseUrl}accounting/billings/debit-notes/${full['debit_note_id']}">#${full['debit_note_id']}</a>`;
+            const docPrefix = full['document_prefix'] || '';
+            const docNumber = full['document_number'] || '';
+            const displayNumber = docPrefix + docNumber;
+
+            return `<a href="${baseUrl}accounting/billings/debit-notes/${full['debit_note_id']}">#${displayNumber}</a>`;
           }
         },
         {
@@ -47,16 +51,21 @@ document.addEventListener('DOMContentLoaded', function () {
             const debitNoteStatus = full['debit_note_status'];
             const balance = full['balance'];
             const dueDate = full['due_date'] ? new Date(full['due_date']) : null;
-            const formattedDate = dueDate && !isNaN(dueDate.getTime()) 
-              ? dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-              : 'Not set';
+            const formattedDate =
+              dueDate && !isNaN(dueDate.getTime())
+                ? dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : 'Not set';
             const roleBadgeObj = {
               Sent: '<span class="badge p-1_5 rounded-pill bg-label-secondary"><i class="icon-base bx bx-envelope"></i></span>',
-              Draft: '<span class="badge p-1_5 rounded-pill bg-label-primary"><i class="icon-base bx bx-folder"></i></span>',
-              'Past Due': '<span class="badge p-1_5 rounded-pill bg-label-danger"><i class="icon-base bx bx-error"></i></span>',
-              'Partial Payment': '<span class="badge p-1_5 rounded-pill bg-label-success"><i class="icon-base bx bx-check"></i></span>',
+              Draft:
+                '<span class="badge p-1_5 rounded-pill bg-label-primary"><i class="icon-base bx bx-folder"></i></span>',
+              'Past Due':
+                '<span class="badge p-1_5 rounded-pill bg-label-danger"><i class="icon-base bx bx-error"></i></span>',
+              'Partial Payment':
+                '<span class="badge p-1_5 rounded-pill bg-label-success"><i class="icon-base bx bx-check"></i></span>',
               Paid: '<span class="badge p-1_5 rounded-pill bg-label-warning"><i class="icon-base bx bx-pie-chart-alt"></i></span>',
-              Downloaded: '<span class="badge p-1_5 rounded-pill bg-label-info"><i class="icon-base bx bx-down-arrow-alt"></i></span>'
+              Downloaded:
+                '<span class="badge p-1_5 rounded-pill bg-label-info"><i class="icon-base bx bx-down-arrow-alt"></i></span>'
             };
             const tooltipContent = `
               ${debitNoteStatus}<br>
@@ -304,13 +313,13 @@ document.addEventListener('DOMContentLoaded', function () {
     function handleDelete(debitNoteId, row, modal = null) {
       Swal.fire({
         title: 'Are you sure?',
-        text: "This debit note will be permanently deleted!",
+        text: 'This debit note will be permanently deleted!',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Yes, delete it!'
-      }).then((result) => {
+      }).then(result => {
         if (result.isConfirmed) {
           fetch(`${baseUrl}accounting/billings/debit-notes/${debitNoteId}`, {
             method: 'DELETE',
@@ -400,7 +409,8 @@ document.addEventListener('DOMContentLoaded', function () {
       {
         selector: '.dt-layout-end',
         classToRemove: 'justify-content-between ms-auto',
-        classToAdd: 'justify-content-md-between justify-content-center d-flex flex-wrap gap-sm-4 mb-sm-0 mb-5 mt-0 pe-md-3 ps-0'
+        classToAdd:
+          'justify-content-md-between justify-content-center d-flex flex-wrap gap-sm-4 mb-sm-0 mb-5 mt-0 pe-md-3 ps-0'
       },
       {
         selector: '.dt-layout-start',

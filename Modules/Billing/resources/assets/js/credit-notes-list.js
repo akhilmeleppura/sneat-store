@@ -38,7 +38,11 @@ document.addEventListener('DOMContentLoaded', function () {
         {
           targets: 2,
           render: function (data, type, full) {
-            return `<a href="${baseUrl}accounting/billings/credit-notes/${full['credit_note_id']}">#${full['credit_note_id']}</a>`;
+            const docPrefix = full['document_prefix'] || '';
+            const docNumber = full['document_number'] || '';
+            const displayNumber = docPrefix + docNumber;
+
+            return `<a href="${baseUrl}accounting/billings/credit-notes/${full['credit_note_id']}">#${displayNumber}</a>`;
           }
         },
         {
@@ -47,16 +51,21 @@ document.addEventListener('DOMContentLoaded', function () {
             const creditNoteStatus = full['credit_note_status'];
             const balance = full['balance'];
             const dueDate = full['due_date'] ? new Date(full['due_date']) : null;
-            const formattedDate = dueDate && !isNaN(dueDate.getTime()) 
-              ? dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-              : 'Not set';
+            const formattedDate =
+              dueDate && !isNaN(dueDate.getTime())
+                ? dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : 'Not set';
             const roleBadgeObj = {
               Sent: '<span class="badge p-1_5 rounded-pill bg-label-secondary"><i class="icon-base icon-16px bx bx-envelope"></i></span>',
-              Draft: '<span class="badge p-1_5 rounded-pill bg-label-primary"><i class="icon-base icon-16px bx bx-folder"></i></span>',
-              'Past Due': '<span class="badge p-1_5 rounded-pill bg-label-danger"><i class="icon-base icon-16px bx bx-error"></i></span>',
-              'Partial Payment': '<span class="badge p-1_5 rounded-pill bg-label-success"><i class="icon-base icon-16px bx bx-check"></i></span>',
+              Draft:
+                '<span class="badge p-1_5 rounded-pill bg-label-primary"><i class="icon-base icon-16px bx bx-folder"></i></span>',
+              'Past Due':
+                '<span class="badge p-1_5 rounded-pill bg-label-danger"><i class="icon-base icon-16px bx bx-error"></i></span>',
+              'Partial Payment':
+                '<span class="badge p-1_5 rounded-pill bg-label-success"><i class="icon-base icon-16px bx bx-check"></i></span>',
               Paid: '<span class="badge p-1_5 rounded-pill bg-label-warning"><i class="icon-base icon-16px bx bx-pie-chart-alt"></i></span>',
-              Downloaded: '<span class="badge p-1_5 rounded-pill bg-label-info"><i class="icon-base icon-16px bx bx-down-arrow-alt"></i></span>'
+              Downloaded:
+                '<span class="badge p-1_5 rounded-pill bg-label-info"><i class="icon-base icon-16px bx bx-down-arrow-alt"></i></span>'
             };
             const tooltipContent = `
               ${creditNoteStatus}<br>
@@ -299,18 +308,18 @@ document.addEventListener('DOMContentLoaded', function () {
           });
       }
     });
-    
+
     // DELETE function with SweetAlert + AJAX call
     function handleDelete(creditNoteId, row, modal = null) {
       Swal.fire({
         title: 'Are you sure?',
-        text: "This credit note will be permanently deleted!",
+        text: 'This credit note will be permanently deleted!',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Yes, delete it!'
-      }).then((result) => {
+      }).then(result => {
         if (result.isConfirmed) {
           fetch(`${baseUrl}accounting/billings/credit-notes/${creditNoteId}`, {
             method: 'DELETE',
@@ -334,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     }
-    
+
     // Binding delete button events
     function bindDeleteEvent() {
       const creditNoteTable = document.querySelector('.credit-note-list-table');
@@ -367,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     }
-    
+
     bindDeleteEvent();
     document.addEventListener('show.bs.modal', function (event) {
       if (event.target.classList.contains('dtr-bs-modal')) {
@@ -379,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function () {
         bindDeleteEvent();
       }
     });
-    
+
     dt_credit_note.on('draw', function () {
       const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
       tooltipTriggerList.forEach(tooltipTriggerEl => {
@@ -389,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
   }
-  
+
   setTimeout(() => {
     const elementsToModify = [
       { selector: '.dt-buttons .btn', classToRemove: 'btn-secondary' },
@@ -401,7 +410,8 @@ document.addEventListener('DOMContentLoaded', function () {
       {
         selector: '.dt-layout-end',
         classToRemove: 'justify-content-between ms-auto',
-        classToAdd: 'justify-content-md-between justify-content-center d-flex flex-wrap gap-sm-4 mb-sm-0 mb-5 mt-0 pe-md-3 ps-0'
+        classToAdd:
+          'justify-content-md-between justify-content-center d-flex flex-wrap gap-sm-4 mb-sm-0 mb-5 mt-0 pe-md-3 ps-0'
       },
       {
         selector: '.dt-layout-start',
@@ -411,7 +421,7 @@ document.addEventListener('DOMContentLoaded', function () {
       { selector: '.dt-layout-table', classToRemove: 'row mt-2' },
       { selector: '.dt-layout-full', classToRemove: 'col-md col-12', classToAdd: 'table-responsive' }
     ];
-    
+
     elementsToModify.forEach(({ selector, classToRemove, classToAdd }) => {
       document.querySelectorAll(selector).forEach(element => {
         if (classToRemove) {
