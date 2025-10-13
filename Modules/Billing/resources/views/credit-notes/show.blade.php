@@ -81,7 +81,7 @@
                                     <tr>
                                         <td class="pe-4">Total Credit:</td>
                                         <td class="fw-medium">
-                                            ${{ number_format($creditNote->sub_total - ($creditNote->document_discount_amount ?? 0) + ($creditNote->tax_amount ?? 0), 2) }}
+                                            ${{ number_format($creditNote->total_amount, 2) }}
                                         </td>
                                     </tr>
                                     @if ($creditNote->branch && $creditNote->branch->bank_name)
@@ -175,9 +175,9 @@
                                             -${{ number_format($creditNote->document_discount_amount, 2) }}</p>
                                     @endif
                                     <p class="fw-medium mb-2 border-bottom pb-2">
-                                        ${{ number_format($creditNote->tax_amount ?? 0, 2) }}</p>
+                                        ${{ number_format($creditNote->tax_amount, 2) }}</p>
                                     <p class="fw-medium mb-0">
-                                        ${{ number_format($creditNote->sub_total - ($creditNote->document_discount_amount ?? 0) + ($creditNote->tax_amount ?? 0), 2) }}
+                                        ${{ number_format($creditNote->total_amount, 2) }}
                                     </p>
                                 </td>
                             </tr>

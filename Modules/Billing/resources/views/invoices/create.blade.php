@@ -1,16 +1,19 @@
 @extends('layouts/layoutMaster')
 @section('title', 'Add - Invoice')
 @section('vendor-style')
+    {{-- Added select2.scss --}}
     @vite(['resources/assets/vendor/libs/flatpickr/flatpickr.scss', 'resources/assets/vendor/libs/select2/select2.scss'])
 @endsection
 @section('page-style')
     @vite('resources/assets/vendor/scss/pages/app-invoice.scss')
 @endsection
 @section('vendor-script')
+    {{-- Added select2.js --}}
     @vite(['resources/assets/vendor/libs/flatpickr/flatpickr.js', 'resources/assets/vendor/libs/cleave-zen/cleave-zen.js', 'resources/assets/vendor/libs/jquery-repeater/jquery-repeater.js', 'resources/assets/vendor/libs/select2/select2.js'])
 @endsection
 @section('page-script')
-    @vite(['resources/assets/js/offcanvas-send-invoice.js', 'resources/assets/js/app-invoice-add.js'])
+    {{-- We removed the generic app-invoice-add.js to avoid conflicts --}}
+    @vite(['resources/assets/js/offcanvas-send-invoice.js'])
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
@@ -43,7 +46,7 @@
             calculateSubtotal();
 
             // =========================================================================================
-            //  SELECT2 INITIALIZATION WITH PROPER EVENT HANDLERS
+            //  SELECT2 & REPEATER INITIALIZATION (FIXED)
             // =========================================================================================
             $(document).ready(function() {
                 // Initialize Select2 for customer dropdown
@@ -55,7 +58,6 @@
                         width: '100%'
                     });
 
-                    // IMPORTANT: Use Select2's change event, not native change
                     clientSelect.on('select2:select', function(e) {
                         handleClientSelection(this);
                     });
@@ -105,25 +107,20 @@
                     document.getElementById('client_id').value = '';
                 }
 
-                // Initialize Select2 for item dropdowns
+                // Function to initialize Select2 on item dropdowns
                 function initializeItemSelect(element) {
                     const $element = $(element);
-
                     if ($element.hasClass('select2-hidden-accessible')) {
                         $element.select2('destroy');
                     }
-
                     $element.select2({
                         placeholder: '-- Select Item --',
                         allowClear: true,
                         width: '100%'
                     });
-
-                    // IMPORTANT: Use Select2's select event for item selection
                     $element.on('select2:select', function(e) {
                         handleItemSelection(this);
                     });
-
                     $element.on('select2:clear', function(e) {
                         clearItemDetails(this);
                     });
@@ -133,7 +130,6 @@
                 function handleItemSelection(selectElement) {
                     let selected = selectElement.options[selectElement.selectedIndex];
                     let wrapper = selectElement.closest('.repeater-wrapper');
-
                     if (selected && selected.value && selected.value !== '') {
                         let price = parseFloat(selected.getAttribute('data-price')) || 0;
                         wrapper.querySelector('.selling-unit-price').value = price.toFixed(2);
@@ -152,52 +148,48 @@
                     wrapper.querySelector('.item-tax-amount').textContent = '$0.00';
                 }
 
-                // Initialize first item select
-                $('.item-details').each(function() {
-                    initializeItemSelect(this);
-                });
+                // --- START: JQUERY REPEATER INITIALIZATION ---
+                const invoiceForm = $('.source-item');
+                if (invoiceForm.length) {
+                    invoiceForm.repeater({
+                        show: function() {
+                            const $item = $(this);
+                            const itemSelect = $item.find('.item-details');
+                            initializeItemSelect(itemSelect);
 
-                // Handle repeater add - initialize Select2 on new rows
-                $('.invoice-form-container [data-repeater-list]').on('DOMNodeInserted', function(e) {
-                    const $target = $(e.target);
+                            // Reset values and displays for the new row
+                            const taxDisplay = $item.find('.tax-1')[0];
+                            if (taxDisplay) taxDisplay.textContent = '0%';
+                            const taxIdField = $item.find('.item-tax-id')[0];
+                            if (taxIdField) taxIdField.value = '0';
+                            const discountDisplay = $item.find('.discount')[0];
+                            if (discountDisplay) discountDisplay.textContent = '0%';
 
-                    if ($target.hasClass('repeater-wrapper')) {
-                        const newSelect = $target.find('.item-details')[0];
-
-                        if (newSelect) {
-                            initializeItemSelect(newSelect);
-                        }
-
-                        // Reset tax and discount displays
-                        const taxDisplay = $target.find('.tax-1')[0];
-                        if (taxDisplay) {
-                            taxDisplay.textContent = '0%';
-                        }
-                        const taxIdField = $target.find('.item-tax-id')[0];
-                        if (taxIdField) {
-                            taxIdField.value = '0';
-                        }
-                        const discountDisplay = $target.find('.discount')[0];
-                        if (discountDisplay) {
-                            discountDisplay.textContent = '0%';
-                        }
-                    }
-                });
-
-                // Fallback: Initialize on button click
-                $('.invoice-form-container').on('click', '[data-repeater-create]', function() {
-                    setTimeout(function() {
-                        $('.item-details').each(function() {
-                            if (!$(this).hasClass('select2-hidden-accessible')) {
-                                initializeItemSelect(this);
+                            $(this).slideDown();
+                        },
+                        hide: function(deleteElement) {
+                            const $item = $(this);
+                            const itemSelect = $item.find('.item-details');
+                            if (itemSelect.hasClass('select2-hidden-accessible')) {
+                                itemSelect.select2('destroy');
                             }
-                        });
-                    }, 100);
-                });
+                            if (confirm('Are you sure you want to delete this element?')) {
+                                $(this).slideUp(deleteElement);
+                            }
+                        }
+                    });
+
+                    // Initialize Select2 for the first (pre-existing) item
+                    $('.item-details').each(function() {
+                        initializeItemSelect(this);
+                    });
+                }
+                // --- END: JQUERY REPEATER INITIALIZATION ---
             });
             // =========================================================================================
-            // END OF SELECT2 INITIALIZATION
+            // END OF SELECT2 & REPEATER INITIALIZATION
             // =========================================================================================
+
 
             // =========================================================================================
             // APPLY CHANGES EVENT LISTENER

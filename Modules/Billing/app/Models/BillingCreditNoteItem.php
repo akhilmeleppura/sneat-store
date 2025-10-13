@@ -25,6 +25,39 @@ class BillingCreditNoteItem extends Model
         'branch_id'
     ];
 
+    /**
+     * Get the calculated tax amount for this item.
+     *
+     * @return float
+     */
+    public function getTaxAmountAttribute()
+    {
+        if (!$this->tax_id) {
+            return 0;
+        }
+        
+        $tax = Tax::find($this->tax_id);
+        if (!$tax) {
+            return 0;
+        }
+        
+        $itemTotal = $this->quantity * $this->selling_unit_price;
+        $discountAmount = $itemTotal * ($this->discount_rate / 100);
+        $taxableAmount = $itemTotal - $discountAmount;
+        
+        return ($taxableAmount * $tax->percentage) / 100;
+    }
+
+    /**
+     * Get the total amount for this item including tax.
+     *
+     * @return float
+     */
+    public function getTotalAmountAttribute()
+    {
+        return $this->subtotal + $this->tax_amount;
+    }
+
     public function document()
     {
         return $this->belongsTo(BillingCreditNote::class, 'document_id');

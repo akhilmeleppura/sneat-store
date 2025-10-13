@@ -409,6 +409,23 @@
       ]
     },
     {
+      "name": "Customers",
+      "icon": "menu-icon icon-base bx bx-group",
+      "slug": "customers",
+      "submenu": [
+        {
+          "url": "/general/customers",
+          "name": "Customers",
+          "slug": "customers-index"
+        },
+        {
+          "url": "/general/customer-types",
+          "name": "Customer Types",
+          "slug": "customer-types-index"
+        }
+      ]
+    },
+    {
       "name": "Roles & Permissions",
       "icon": "menu-icon icon-base bx bx-check-shield",
       "slug": "app-access",

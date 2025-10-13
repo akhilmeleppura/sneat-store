@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
-    protected $fillable = ['name', 'email', 'phone', 'address', 'customer_type_id'];
+    protected $fillable = ['name', 'email', 'phone', 'address','status', 'customer_type_id'];
 
     public function customerType()
     {
@@ -18,5 +18,39 @@ class Customer extends Model
     public function invoices()
     {
         return $this->hasMany(BillingInvoice::class);
+    }
+    /**
+     * Get status badge HTML.
+     *
+     * @return string
+     */
+    public function getStatusBadgeAttribute()
+    {
+        $badgeClass = $this->status === 'active' ? 'bg-label-success' : 'bg-label-secondary';
+        $statusText = ucfirst($this->status);
+        
+        return "<span class='badge {$badgeClass}'>{$statusText}</span>";
+    }
+
+    /**
+     * Scope a query to only include active customers.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    /**
+     * Scope a query to only include inactive customers.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeInactive($query)
+    {
+        return $query->where('status', 'inactive');
     }
 }

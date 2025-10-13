@@ -25,6 +25,25 @@ class BillingDebitNoteItem extends Model
         'branch_id'
     ];
 
+    // Add this method to calculate tax amount for each item
+    public function getTaxAmountAttribute()
+    {
+        if (!$this->tax_id) {
+            return 0;
+        }
+
+        $tax = Tax::find($this->tax_id);
+        if (!$tax) {
+            return 0;
+        }
+
+        $itemTotal = $this->quantity * $this->selling_unit_price;
+        $discountAmount = ($itemTotal * $this->discount_rate) / 100;
+        $totalAfterDiscount = $itemTotal - $discountAmount;
+
+        return ($totalAfterDiscount * $tax->percentage) / 100;
+    }
+
     public function document()
     {
         return $this->belongsTo(BillingDebitNote::class, 'document_id');

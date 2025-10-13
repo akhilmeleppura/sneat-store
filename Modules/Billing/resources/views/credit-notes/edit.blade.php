@@ -16,25 +16,27 @@
 @endsection
 
 @section('page-script')
-    @vite(['resources/assets/js/offcanvas-send-invoice.js', 'resources/assets/js/app-invoice-add.js'])
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11">
-    </script>
+    {{-- Removed app-invoice-add.js to prevent conflicts --}}
+    @vite(['resources/assets/js/offcanvas-send-invoice.js'])
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             // Flatpickr for Issued Date
-            const issueDatePicker = flatpickr(".credit-note-date", {
+            flatpickr(".credit-note-date", {
                 dateFormat: "m/d/Y",
                 defaultDate: "{{ $creditNote->issue_date ? $creditNote->issue_date->format('m/d/Y') : '' }}",
             });
 
             // Flatpickr for Due Date
-            const dueDatePicker = flatpickr(".due-date", {
+            flatpickr(".due-date", {
                 dateFormat: "m/d/Y",
                 defaultDate: "{{ $creditNote->due_date ? $creditNote->due_date->format('m/d/Y') : '' }}",
                 minDate: "today"
             });
 
-            // Select2 Initialization
+            // =========================================================================================
+            //  SELECT2 & REPEATER INITIALIZATION (FIXED)
+            // =========================================================================================
             $(document).ready(function() {
                 const invoiceSelect = $('#invoiceSelect');
                 if (invoiceSelect.length) {
@@ -75,7 +77,9 @@
 
                 function initializeItemSelect(element) {
                     const $element = $(element);
-                    if ($element.hasClass('select2-hidden-accessible')) $element.select2('destroy');
+                    if ($element.hasClass('select2-hidden-accessible')) {
+                        $element.select2('destroy');
+                    }
                     $element.select2({
                         placeholder: '-- Select Item --',
                         allowClear: true,
@@ -105,48 +109,67 @@
                     calculateSubtotal();
                 }
 
-                $('.item-details').each(function() {
-                    initializeItemSelect(this);
-                });
-
-                $('.invoice-form-container').on('click', '[data-repeater-create]', function() {
-                    setTimeout(function() {
-                        const $lastRow = $('.repeater-wrapper').last();
-                        const itemSelect = $lastRow.find('.item-details');
-                        if (!itemSelect.hasClass('select2-hidden-accessible')) {
-                            initializeItemSelect(itemSelect[0]);
+                // --- START: JQUERY REPEATER FIX ---
+                const creditNoteForm = $('.source-item');
+                if (creditNoteForm.length) {
+                    creditNoteForm.repeater({
+                        show: function() {
+                            const $item = $(this);
+                            initializeItemSelect($item.find('.item-details'));
+                            // Reset values for new row
+                            $item.find('.discount, .tax-1').text('0%');
+                            $item.find('.item-discount-amount, .item-tax-amount').text('$0.00');
+                            $item.find('.selling-unit-price').val('');
+                            $item.find('.quantity').val('1');
+                            $item.find('.total-price').val('0.00');
+                            $item.find('.item-tax-id').val('0');
+                            $item.find('.item-discount-input, .item-tax-select').val('0');
+                            $item.find('.item-details').val('').trigger('change');
+                            $(this).slideDown();
+                        },
+                        hide: function(deleteElement) {
+                            const $item = $(this);
+                            const itemSelect = $item.find('.item-details');
+                            if (itemSelect.hasClass('select2-hidden-accessible')) {
+                                itemSelect.select2('destroy');
+                            }
+                            if (confirm('Are you sure you want to delete this element?')) {
+                                $(this).slideUp(deleteElement, function() {
+                                    $(this).remove();
+                                    calculateSubtotal(); // Recalculate after removal
+                                });
+                            }
                         }
-                        if ($lastRow.length) {
-                            $lastRow.find('.discount, .tax-1').text('0%');
-                            $lastRow.find('.item-discount-amount, .item-tax-amount').text(
-                                '$0.00');
-                            $lastRow.find('.selling-unit-price').val('');
-                            $lastRow.find('.quantity').val('1');
-                            $lastRow.find('.total-price').val('0.00');
-                            $lastRow.find('.item-tax-id').val('0');
-                            $lastRow.find('.item-discount-input, .item-tax-select').val(
-                            '0');
-                            itemSelect.val('').trigger('change');
-                        }
-                    }, 150);
-                });
+                    });
 
+                    // Initialize Select2 for pre-existing items
+                    $('.item-details').each(function() {
+                        initializeItemSelect(this);
+                    });
+                }
+                // --- END: JQUERY REPEATER FIX ---
+
+                // Trigger initial selection details
                 setTimeout(() => {
                     if (invoiceSelect.val()) {
                         handleInvoiceSelection(invoiceSelect[0]);
                     }
-                    $('#tax').val("{{ $creditNote->document_tax_id ?? 0 }}");
-                    $('#discount-type').val(
-                        "{{ $creditNote->document_discount_type == 1 ? '%' : 'Amount' }}");
-                    $('#discount').val(
-                        "{{ $creditNote->document_discount_rate > 0 ? $creditNote->document_discount_rate : $creditNote->document_discount_amount }}"
-                        );
-                    document.querySelectorAll('.repeater-wrapper').forEach(wrapper =>
-                        calculateItemTotal(wrapper));
-                    calculateSubtotal();
-                }, 300);
+                }, 100);
             });
 
+            // Initial calculation setup
+            setTimeout(() => {
+                $('#tax').val("{{ $creditNote->document_tax_id ?? 0 }}");
+                $('#discount-type').val("{{ $creditNote->document_discount_type == 1 ? '%' : 'Amount' }}");
+                $('#discount').val(
+                    "{{ $creditNote->document_discount_rate > 0 ? $creditNote->document_discount_rate : $creditNote->document_discount_amount }}"
+                );
+                document.querySelectorAll('.repeater-wrapper').forEach(wrapper => calculateItemTotal(
+                    wrapper));
+                calculateSubtotal();
+            }, 300);
+
+            // Apply item-level changes from dropdown
             document.addEventListener('click', function(e) {
                 if (e.target.classList.contains('btn-apply-changes')) {
                     e.preventDefault();
@@ -187,10 +210,12 @@
         document.addEventListener('change', (e) => {
             if (e.target.id === "discount-type" || e.target.id === "tax") calculateSubtotal();
         });
+
         document.addEventListener("input", (e) => {
             if (e.target.matches('.quantity, .selling-unit-price, #discount')) {
-                if (e.target.closest('.repeater-wrapper')) calculateItemTotal(e.target.closest(
-                '.repeater-wrapper'));
+                if (e.target.closest('.repeater-wrapper')) {
+                    calculateItemTotal(e.target.closest('.repeater-wrapper'));
+                }
                 calculateSubtotal();
             }
         });
@@ -207,31 +232,42 @@
                 itemLevelTaxTotal += parseFloat((row.querySelector('.item-tax-amount')?.textContent || '$0')
                     .replace('$', ''));
             });
-            $("#subtotal-display").text('$' + subtotal.toFixed(2));
-            $("#item-level-discount-total-display").text('-$' + itemLevelDiscountTotal.toFixed(2));
-            $("#item-level-tax-total-display").text('+$' + itemLevelTaxTotal.toFixed(2));
+
+            document.getElementById("subtotal-display").textContent = '$' + subtotal.toFixed(2);
+            document.getElementById("item-level-discount-total-display").textContent = '-$' + itemLevelDiscountTotal
+                .toFixed(2);
+            document.getElementById("item-level-tax-total-display").textContent = '+$' + itemLevelTaxTotal.toFixed(2);
             let subtotalAfterItemAdjustments = subtotal - itemLevelDiscountTotal + itemLevelTaxTotal;
-            $("#subtotal-after-item-adjustments-display").text('$' + subtotalAfterItemAdjustments.toFixed(2));
-            let discountValue = parseFloat($("#discount").val() || 0);
-            let discountType = $("#discount-type").val() || "%";
+            document.getElementById("subtotal-after-item-adjustments-display").textContent = '$' +
+                subtotalAfterItemAdjustments.toFixed(2);
+
+            let discountValue = parseFloat(document.getElementById("discount")?.value || 0);
+            let discountType = document.getElementById("discount-type")?.value || "%";
             let discountAmount = (discountType === "%") ? (subtotalAfterItemAdjustments * discountValue) / 100 :
                 discountValue;
-            $("#discount-display").text('-$' + discountAmount.toFixed(2));
+            document.getElementById("discount-display").textContent = '-$' + discountAmount.toFixed(2);
+
             let taxableAmount = Math.max(0, subtotalAfterItemAdjustments - discountAmount);
-            $("#taxable-amount-display").text('$' + taxableAmount.toFixed(2));
+            document.getElementById("taxable-amount-display").textContent = '$' + taxableAmount.toFixed(2);
+
             let taxSelect = document.getElementById("tax");
             let taxRate = parseFloat(taxSelect.options[taxSelect.selectedIndex]?.getAttribute('data-rate') || 0);
             let taxAmount = (taxableAmount * taxRate) / 100;
-            $("#tax-amount-display").text('+$' + taxAmount.toFixed(2));
+            document.getElementById("tax-amount-display").textContent = '+$' + taxAmount.toFixed(2);
             let grandTotal = taxableAmount + taxAmount;
-            $("#grand-total").text('$' + grandTotal.toFixed(2));
-            $("#sub_total").val(subtotal.toFixed(2));
-            $("#document_discount_amount").val(discountAmount.toFixed(2));
-            $("#tax_amount").val(taxAmount.toFixed(2));
-            $("#total_amount").val(grandTotal.toFixed(2));
-            $("#tax_id").val(taxSelect.value);
-            $("#document_discount_type").val(discountType === "%" ? 1 : 2);
-            $("#document_discount_rate").val(discountValue.toFixed(2));
+            document.getElementById("grand-total").textContent = '$' + grandTotal.toFixed(2);
+
+            // Update hidden fields for submission
+            document.getElementById("sub_total").value = subtotal.toFixed(2);
+            document.getElementById("document_discount_amount").value = discountAmount.toFixed(2);
+
+            // *** UPDATED THIS LINE: Changed id from tax_amount ***
+            document.getElementById("document_tax_amount").value = taxAmount.toFixed(2);
+
+            document.getElementById("total_amount").value = grandTotal.toFixed(2);
+            document.getElementById("tax_id").value = taxSelect.value;
+            document.getElementById("document_discount_type").value = discountType === "%" ? 1 : 2;
+            document.getElementById("document_discount_rate").value = discountValue.toFixed(2);
         }
 
         // AJAX Form Submission
@@ -239,19 +275,21 @@
             const form = document.getElementById('creditNoteForm');
             const saveButton = document.getElementById('updateCreditNoteBtn');
 
-            if (!$('#invoiceSelect').val()) {
-                return Swal.fire({
+            if (!document.getElementById('invoiceSelect').value) {
+                Swal.fire({
                     icon: 'warning',
                     title: 'Validation Error',
                     text: 'Please select an associated invoice.'
                 });
+                return;
             }
             if (!Array.from(document.querySelectorAll('.item-details')).some(item => item.value)) {
-                return Swal.fire({
+                Swal.fire({
                     icon: 'warning',
                     title: 'Validation Error',
                     text: 'Please add at least one item.'
                 });
+                return;
             }
 
             saveButton.disabled = true;
@@ -260,26 +298,38 @@
             let formData = new FormData(form);
             formData.append('_method', 'PUT');
 
-            let issueDate = $('.credit-note-date').val();
-            if (issueDate) {
-                let parts = issueDate.split('/');
+            // =================================================================
+            // START: DATE HANDLING FIX
+            // Manually get, format, and set dates since they are outside the <form>
+            // =================================================================
+            let issueDateStr = document.querySelector('.credit-note-date').value;
+            if (issueDateStr) {
+                const parts = issueDateStr.split('/');
                 formData.set('issue_date', `${parts[2]}-${parts[0]}-${parts[1]}`);
+            } else {
+                formData.set('issue_date', ''); // Ensure field is sent even if empty
             }
 
-            let dueDate = $('.due-date').val();
-            if (dueDate) {
-                let parts = dueDate.split('/');
+            let dueDateStr = document.querySelector('.due-date').value;
+            if (dueDateStr) {
+                const parts = dueDateStr.split('/');
                 formData.set('due_date', `${parts[2]}-${parts[0]}-${parts[1]}`);
+            } else {
+                formData.set('due_date', ''); // Ensure field is sent even if empty
             }
+            // =================================================================
+            // END: DATE HANDLING FIX
+            // =================================================================
 
-            formData.set('credit_note_number', $('#creditNoteId').val());
+            formData.set('credit_note_number', document.getElementById('creditNoteId').value);
 
             // Manually structure repeater data
             document.querySelectorAll('.repeater-wrapper').forEach((row, index) => {
                 const itemId = row.querySelector('.item-details')?.value;
                 if (itemId) {
-                    const itemDbId = row.querySelector('input[name="id"]')?.value;
+                    const itemDbId = row.querySelector('input[name*="[id]"]')?.value;
                     const prefix = itemDbId ? `existing_items[${index}]` : `items[${index}]`;
+
                     if (itemDbId) formData.append(`${prefix}[id]`, itemDbId);
                     formData.append(`${prefix}[item_id]`, itemId);
                     formData.append(`${prefix}[quantity]`, parseFloat(row.querySelector('.quantity')?.value || 0));
@@ -293,7 +343,6 @@
                 }
             });
 
-            // Submit the form
             fetch("{{ route('billing.credit-notes.update', $creditNote->id) }}", {
                     method: 'POST',
                     headers: {
@@ -302,15 +351,22 @@
                     },
                     body: formData
                 })
-                .then(response => response.json().then(data => ({
-                    ok: response.ok,
-                    data
-                })))
-                .then(({
-                    ok,
-                    data
-                }) => {
-                    if (ok) {
+                .then(async response => {
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({
+                            message: `HTTP error! Status: ${response.status}`
+                        }));
+                        // Extract validation errors if available
+                        let errorMessage = errorData.message || 'An unknown error occurred';
+                        if (errorData.errors) {
+                            errorMessage = Object.values(errorData.errors).join('<br>');
+                        }
+                        throw new Error(errorMessage);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
                         Swal.fire({
                                 icon: 'success',
                                 title: 'Success!',
@@ -318,14 +374,18 @@
                             })
                             .then(() => window.location.href = "{{ route('billing.credit-notes.index') }}");
                     } else {
-                        throw new Error(data.message || 'An unknown error occurred.');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: data.message
+                        });
                     }
                 })
                 .catch(error => {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Error!',
-                        text: error.message
+                        title: 'Request Failed!',
+                        html: `<div>An error occurred while updating the credit note.</div><div class="text-danger small mt-2">${error.message}</div>`
                     });
                 })
                 .finally(() => {
@@ -415,7 +475,7 @@
                     <div class="row">
                         <div class="col-md-6 col-sm-5 col-12 mb-sm-0 mb-6">
                             <h6>Invoice To:</h6>
-                            <select class="form-select mb-4" id="invoiceSelect">
+                            <select class="form-select mb-4" id="invoiceSelect" name="invoice_id_select">
                                 <option value=""></option>
                                 @foreach ($invoices as $invoice)
                                     <option value="{{ $invoice->id }}"
@@ -450,13 +510,17 @@
                     <form class="source-item" id="creditNoteForm" method="POST"
                         action="{{ route('billing.credit-notes.update', $creditNote->id) }}">
                         @csrf
+                        {{-- Hidden fields are populated by the calculateSubtotal() function --}}
                         <input type="hidden" name="invoice_id" id="invoice_id" value="{{ $creditNote->invoice_id }}">
                         <input type="hidden" name="sub_total" id="sub_total">
                         <input type="hidden" name="document_discount_type" id="document_discount_type">
                         <input type="hidden" name="document_discount_rate" id="document_discount_rate">
                         <input type="hidden" name="document_discount_amount" id="document_discount_amount">
                         <input type="hidden" name="tax_id" id="tax_id">
-                        <input type="hidden" name="tax_amount" id="tax_amount">
+                        
+                        <!-- *** UPDATED THIS LINE: Changed name and id from tax_amount *** -->
+                        <input type="hidden" name="document_tax_amount" id="document_tax_amount">
+
                         <input type="hidden" name="total_amount" id="total_amount">
 
                         <div class="invoice-form-container">
@@ -522,13 +586,13 @@
                                                         data-bs-toggle="dropdown" data-bs-auto-close="false"></i>
                                                     <div class="dropdown-menu dropdown-menu-end w-px-300 p-4">
                                                         <div class="row g-3">
-                                                            <div class="col-12"><label class="form-label">Item Level
-                                                                    Discount (%)</label><input type="number"
+                                                            <div class="col-12"><label class="form-label">Discount
+                                                                    (%)</label><input type="number"
                                                                     class="form-control item-discount-input"
                                                                     value="{{ $creditNoteItem->discount_rate ?? 0 }}"
                                                                     min="0" max="100" /></div>
-                                                            <div class="col-12"><label class="form-label">Item Level
-                                                                    Tax</label><select class="form-select item-tax-select">
+                                                            <div class="col-12"><label class="form-label">Tax</label>
+                                                                <select class="form-select item-tax-select">
                                                                     <option value="0" data-percentage="0"
                                                                         {{ !$creditNoteItem->tax_id ? 'selected' : '' }}>0%
                                                                     </option>
@@ -536,84 +600,6 @@
                                                                         <option value="{{ $tax->id }}"
                                                                             data-percentage="{{ $tax->percentage }}"
                                                                             {{ $creditNoteItem->tax_id == $tax->id ? 'selected' : '' }}>
-                                                                            {{ $tax->name }} ({{ $tax->percentage }}%)
-                                                                        </option>
-                                                                    @endforeach
-                                                                </select></div>
-                                                        </div>
-                                                        <div class="dropdown-divider my-4"></div>
-                                                        <button type="button"
-                                                            class="btn btn-label-primary btn-apply-changes">Apply</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="repeater-wrapper pt-0 pt-md-9" data-repeater-item>
-                                        <div class="d-flex border rounded position-relative pe-0">
-                                            <div class="row w-100 p-6 g-6">
-                                                <div class="col-md-4 col-12 mb-md-0 mb-4">
-                                                    <p class="h6 repeater-title">Item</p><select
-                                                        class="form-select item-details" name="item_id">
-                                                        <option value=""></option>
-                                                        @foreach ($items as $item)
-                                                            <option value="{{ $item->id }}"
-                                                                data-price="{{ number_format($item->selling_unit_price ?? 0, 2, '.', '') }}">
-                                                                {{ $item->name ?? 'Unknown' }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-3 col-12 mb-md-0 mb-4">
-                                                    <p class="h6 repeater-title">Selling Unit Price</p><input
-                                                        type="number" class="form-control selling-unit-price"
-                                                        name="unit_price" step="0.01" min="0">
-                                                    <div class="text-heading mt-2">
-                                                        <div class="mb-1"><small
-                                                                class="text-muted">Discount:</small><span
-                                                                class="discount me-2">0%</span><small
-                                                                class="text-muted">Amt:</small><span
-                                                                class="item-discount-amount text-success fw-medium">$0.00</span>
-                                                        </div>
-                                                        <div class="mb-1"><small class="text-muted">Tax:</small><span
-                                                                class="tax-1 me-2">0%</span><input type="hidden"
-                                                                class="item-tax-id" name="tax_id" value="0"><small
-                                                                class="text-muted">Amt:</small><span
-                                                                class="item-tax-amount text-primary fw-medium">$0.00</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2 col-12 mb-md-0 mb-4">
-                                                    <p class="h6 repeater-title">Qty</p><input type="number"
-                                                        class="form-control quantity" name="quantity" value="1"
-                                                        min="1">
-                                                </div>
-                                                <div class="col-md-3 col-12 pe-0">
-                                                    <p class="h6 repeater-title">Price</p><input type="number"
-                                                        class="form-control total-price" name="total_price" readonly>
-                                                </div>
-                                            </div>
-                                            <div
-                                                class="d-flex flex-column align-items-center justify-content-between border-start p-2">
-                                                <i class="icon-base bx bx-x icon-lg cursor-pointer"
-                                                    data-repeater-delete></i>
-                                                <div class="dropdown">
-                                                    <i class="icon-base bx bx-cog icon-lg cursor-pointer" role="button"
-                                                        data-bs-toggle="dropdown" data-bs-auto-close="false"></i>
-                                                    <div class="dropdown-menu dropdown-menu-end w-px-300 p-4">
-                                                        <div class="row g-3">
-                                                            <div class="col-12"><label class="form-label">Discount
-                                                                    (%)</label><input type="number"
-                                                                    class="form-control item-discount-input"
-                                                                    value="0" min="0" max="100" /></div>
-                                                            <div class="col-12"><label
-                                                                    class="form-label">Tax</label><select
-                                                                    class="form-select item-tax-select">
-                                                                    <option value="0" data-percentage="0" selected>0%
-                                                                    </option>
-                                                                    @foreach ($taxes as $tax)
-                                                                        <option value="{{ $tax->id }}"
-                                                                            data-percentage="{{ $tax->percentage }}">
                                                                             {{ $tax->name }} ({{ $tax->percentage }}%)
                                                                         </option>
                                                                     @endforeach
@@ -628,6 +614,8 @@
                                             </div>
                                         </div>
                                     </div>
+                                @empty
+                                    {{-- This empty block is a fallback in case there are no items --}}
                                 @endforelse
                             </div>
                             <div class="row">
@@ -663,32 +651,38 @@
                                         class="w-px-100 fw-medium text-nowrap">Document Net Amount:</span><span
                                         class="fw-medium text-heading"
                                         id="subtotal-after-item-adjustments-display">$0.00</span></div>
-                                <div class="d-flex justify-content-between align-items-center mb-2"><span
-                                        class="text-nowrap me-2">Document Discount:</span>
-                                    <div class="d-flex align-items-center"><input type="number" id="discount"
-                                            class="form-control form-control-sm" value="0" style="width: 80px;"
-                                            min="0"><select class="form-select form-select-sm ms-2"
-                                            style="width: 70px;" id="discount-type">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-nowrap me-2">Document Discount:</span>
+                                    <div class="d-flex align-items-center">
+                                        <input type="number" id="discount" class="form-control form-control-sm"
+                                            value="0" style="width: 80px;" min="0">
+                                        <select class="form-select form-select-sm ms-2" style="width: 70px;"
+                                            id="discount-type">
                                             <option value="%" selected>%</option>
                                             <option value="Amount">$</option>
-                                        </select><span class="fw-medium text-heading ms-2" id="discount-display"
-                                            style="width: 60px;">-$0.00</span></div>
+                                        </select>
+                                        <span class="fw-medium text-heading ms-2" id="discount-display"
+                                            style="width: 60px;">-$0.00</span>
+                                    </div>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2"><span
                                         class="w-px-100 text-nowrap">Document Taxable Amount:</span><span
                                         class="fw-medium text-heading" id="taxable-amount-display">$0.00</span></div>
-                                <div class="d-flex justify-content-between align-items-center mb-2"><span
-                                        class="text-nowrap me-2">Document Tax:</span>
-                                    <div class="d-flex align-items-center"><select id="tax"
-                                            class="form-select form-control-sm" style="width: 120px;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-nowrap me-2">Document Tax:</span>
+                                    <div class="d-flex align-items-center">
+                                        <select id="tax" class="form-select form-control-sm" style="width: 120px;">
                                             <option value="0" data-rate="0" selected>No tax (0%)</option>
                                             @foreach ($taxes as $tax)
                                                 <option value="{{ $tax->id }}" data-rate="{{ $tax->percentage }}"
                                                     {{ $creditNote->document_tax_id == $tax->id ? 'selected' : '' }}>
-                                                    {{ $tax->name }} ({{ $tax->percentage }}%)</option>
+                                                    {{ $tax->name }} ({{ $tax->percentage }}%)
+                                                </option>
                                             @endforeach
-                                        </select><span class="fw-medium text-heading ms-2" id="tax-amount-display"
-                                            style="width: 60px;">+$0.00</span></div>
+                                        </select>
+                                        <span class="fw-medium text-heading ms-2" id="tax-amount-display"
+                                            style="width: 60px;">+$0.00</span>
+                                    </div>
                                 </div>
                                 <hr class="my-2" />
                                 <div class="d-flex justify-content-between"><span

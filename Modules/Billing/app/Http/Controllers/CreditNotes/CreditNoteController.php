@@ -57,6 +57,7 @@ class CreditNoteController extends Controller
                 'billing_credit_notes.sub_total',
                 'billing_credit_notes.payment_status',
                 'billing_credit_notes.document_discount_amount',
+                'billing_credit_notes.document_tax_id',
                 DB::raw('(billing_credit_notes.sub_total - COALESCE(billing_credit_notes.document_discount_amount, 0)) as balance')
             ])
             ->latest();
@@ -80,13 +81,25 @@ class CreditNoteController extends Controller
         $creditNotes = $query->skip($start)->take($length)->get();
 
         $data = $creditNotes->map(function ($creditNote) {
+            // Calculate tax amount on the fly
+            $taxAmount = 0;
+            if ($creditNote->document_tax_id) {
+                $tax = Tax::find($creditNote->document_tax_id);
+                if ($tax) {
+                    $taxableAmount = $creditNote->sub_total - ($creditNote->document_discount_amount ?? 0);
+                    $taxAmount = ($taxableAmount * $tax->percentage) / 100;
+                }
+            }
+            
+            $balance = $creditNote->sub_total - ($creditNote->document_discount_amount ?? 0) + $taxAmount;
+            
             return [
                 'credit_note_id'     => $creditNote->id,
                 'credit_note_status' => $creditNote->payment_status,
                 'issued_date'        => $creditNote->issue_date ? $creditNote->issue_date->format('Y-m-d') : '',
                 'client_name'        => $creditNote->customer->name ?? 'Unknown',
                 'total'              => $creditNote->sub_total,
-                'balance'            => $creditNote->balance,
+                'balance'            => number_format($balance, 2),
                 'document_prefix'    => $creditNote->document_prefix ?? '',
                 'document_number'    => $creditNote->document_number ?? '',
                 'action'             => '',
@@ -137,7 +150,7 @@ class CreditNoteController extends Controller
         $branch = Branch::find($user->branch_id);
         $items = BillingItem::all();
         $taxes = Tax::all();
-        $invoices = BillingInvoice::with('customer')->get();
+        $invoices = BillingInvoice::with('customer')->limit(100)->get();
         $nextCreditNoteNumber = $this->getNextCreditNoteNumber();
 
         return view('billing::credit-notes.create', compact(
@@ -169,6 +182,62 @@ class CreditNoteController extends Controller
     }
 
     /**
+     * Parse document number into prefix and number components.
+     *
+     * @param string $docNumber
+     * @return array
+     */
+    private function parseDocumentNumber(string $docNumber): array
+    {
+        if (preg_match('/^([A-Za-z]+)-(\d+)$/', $docNumber, $matches)) {
+            return [$matches[1], $matches[2]];
+        }
+        return ['CN', '0001'];
+    }
+
+    /**
+     * Calculate subtotal for credit note items.
+     *
+     * @param array $items
+     * @return float
+     */
+    private function calculateSubtotal(array $items): float
+    {
+        return collect($items)->sum(function ($item) {
+            $qty = $item['quantity'] ?? 0;
+            $price = $item['unit_price'] ?? 0;
+            return $qty * $price;
+        });
+    }
+
+    /**
+     * Calculate tax amount for credit note.
+     *
+     * @param float $subtotal
+     * @param float $discountAmount
+     * @param int|null $taxId
+     * @return float
+     */
+    private function calculateTaxAmount(float $subtotal, float $discountAmount, ?int $taxId): float
+    {
+        if (!$taxId) {
+            return 0;
+        }
+        
+        $tax = Tax::find($taxId);
+        if (!$tax) {
+            return 0;
+        }
+        
+        $taxableAmount = $subtotal - $discountAmount;
+        if ($taxableAmount < 0) {
+            $taxableAmount = 0;
+        }
+        
+        return ($taxableAmount * $tax->percentage) / 100;
+    }
+
+    /**
      * Store a newly created credit note in storage.
      *
      * @param Request $request
@@ -178,7 +247,7 @@ class CreditNoteController extends Controller
     {
         $request->validate([
             'credit_note_number' => 'required|string',
-            'invoice_id' => 'required|exists:billing_invoices,id',
+            'invoice_id' => 'nullable|exists:billing_invoices,id',
             'issue_date' => 'required|date',
             'due_date' => 'required|date|after_or_equal:issue_date',
             'items' => 'required|array',
@@ -191,23 +260,40 @@ class CreditNoteController extends Controller
         DB::beginTransaction();
         try {
             $user = auth()->user();
-            $creditNoteNumber = explode('-', $request->credit_note_number);
-            $prefix = $creditNoteNumber[0] ?? 'CN';
-            $number = $creditNoteNumber[1] ?? '0001';
+            [$prefix, $number] = $this->parseDocumentNumber($request->credit_note_number);
+            $subTotal = $this->calculateSubtotal($request->items);
 
-            $invoice = BillingInvoice::findOrFail($request->invoice_id);
+            // Get customer_id from associated invoice if available, otherwise set to null
+            $customerId = null;
+            if ($request->invoice_id) {
+                $invoice = BillingInvoice::find($request->invoice_id);
+                if ($invoice) {
+                    $customerId = $invoice->customer_id;
+                }
+            }
+
+            // Calculate discount amount
+            $discountAmount = 0;
+            if ($request->document_discount_type == 1) { // Percentage
+                $discountAmount = ($subTotal * $request->document_discount_rate) / 100;
+            } else { // Fixed amount
+                $discountAmount = $request->document_discount_amount;
+            }
+
+            // Calculate tax amount
+            $taxAmount = $this->calculateTaxAmount($subTotal, $discountAmount, $request->tax_id);
 
             $creditNote = BillingCreditNote::create([
                 'document_prefix'          => $prefix,
                 'document_number'          => $number,
-                'customer_id'              => $invoice->customer_id,
                 'invoice_id'               => $request->invoice_id,
+                'customer_id'              => $customerId,
                 'issue_date'               => $request->issue_date,
                 'due_date'                 => $request->due_date,
-                'sub_total'                => $request->sub_total,
+                'sub_total'                => $subTotal,
                 'document_discount_type'   => $request->document_discount_type,
                 'document_discount_rate'   => $request->document_discount_rate,
-                'document_discount_amount' => $request->document_discount_amount,
+                'document_discount_amount' => $discountAmount,
                 'document_tax_id'          => $request->tax_id,
                 'note'                     => $request->note ?? '',
                 'company_id'               => $user->company_id,
@@ -233,8 +319,8 @@ class CreditNoteController extends Controller
             return Reply::success("Credit Note {$creditNote->document_prefix}-{$creditNote->document_number} created successfully!");
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error creating credit note', ['error' => $e]);
-            return Reply::error('An error occurred while creating the credit note.', 500);
+            Log::error("CreditNote store error: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return Reply::error('Error creating credit note: ' . $e->getMessage(), 500);
         }
     }
 
@@ -246,7 +332,9 @@ class CreditNoteController extends Controller
      */
     public function show($id)
     {
-        $creditNote = BillingCreditNote::with(['items.item', 'items.tax', 'invoice', 'createdBy', 'company', 'branch'])->findOrFail($id);
+        // *** CHANGE: Added 'tax' to the with() clause to eager-load the tax relationship ***
+        $creditNote = BillingCreditNote::with(['items.item', 'items.tax', 'tax', 'invoice', 'createdBy', 'company', 'branch'])
+            ->findOrFail($id);
 
         // Get branch logo
         $branchLogo = null;
@@ -260,6 +348,7 @@ class CreditNoteController extends Controller
                 }
             }
         }
+
         $branchId = $creditNote->items->first()?->branch_id;
 
         // Fetch the template directly from DocumentTemplate
@@ -285,7 +374,7 @@ class CreditNoteController extends Controller
      * @param int $id
      * @return \Illuminate\View\View
      */
-    public function edit($id)
+     public function edit($id)
     {
         $creditNote = BillingCreditNote::findOrFail($id);
         $user = auth()->user();
@@ -307,6 +396,7 @@ class CreditNoteController extends Controller
         ));
     }
 
+
     /**
      * Update the specified credit note in storage.
      *
@@ -317,7 +407,7 @@ class CreditNoteController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'invoice_id' => 'required|exists:billing_invoices,id',
+            'invoice_id' => 'nullable|exists:billing_invoices,id',
             'issue_date' => 'required|date',
             'due_date' => 'required|date|after_or_equal:issue_date',
             'existing_items' => 'sometimes|array',
@@ -335,16 +425,54 @@ class CreditNoteController extends Controller
         DB::beginTransaction();
         try {
             $creditNote = BillingCreditNote::findOrFail($id);
-            $invoice = BillingInvoice::findOrFail($request->invoice_id);
 
-            $creditNote->customer_id              = $invoice->customer_id;
+            // Get customer_id from associated invoice if available, otherwise set to null
+            $customerId = null;
+            if ($request->invoice_id) {
+                $invoice = BillingInvoice::find($request->invoice_id);
+                if ($invoice) {
+                    $customerId = $invoice->customer_id;
+                }
+            }
+
+            // Calculate subtotal from all items (existing and new)
+            $allItems = [];
+            
+            // Add existing items
+            if ($request->has('existing_items')) {
+                foreach ($request->existing_items as $itemData) {
+                    $allItems[] = $itemData;
+                }
+            }
+            
+            // Add new items
+            if ($request->has('items')) {
+                foreach ($request->items as $itemData) {
+                    $allItems[] = $itemData;
+                }
+            }
+            
+            $subTotal = $this->calculateSubtotal($allItems);
+
+            // Calculate discount amount
+            $discountAmount = 0;
+            if ($request->document_discount_type == 1) { // Percentage
+                $discountAmount = ($subTotal * $request->document_discount_rate) / 100;
+            } else { // Fixed amount
+                $discountAmount = $request->document_discount_amount;
+            }
+
+            // Calculate tax amount
+            $taxAmount = $this->calculateTaxAmount($subTotal, $discountAmount, $request->tax_id);
+
             $creditNote->invoice_id               = $request->invoice_id;
+            $creditNote->customer_id              = $customerId;
             $creditNote->issue_date               = $request->issue_date;
             $creditNote->due_date                 = $request->due_date;
-            $creditNote->sub_total                = $request->sub_total;
+            $creditNote->sub_total                = $subTotal;
             $creditNote->document_discount_type   = $request->document_discount_type;
             $creditNote->document_discount_rate   = $request->document_discount_rate;
-            $creditNote->document_discount_amount = $request->document_discount_amount;
+            $creditNote->document_discount_amount = $discountAmount;
             $creditNote->document_tax_id          = $request->tax_id;
             $creditNote->note                     = $request->note ?? '';
             $creditNote->updated_by               = auth()->user()->id;
@@ -392,8 +520,8 @@ class CreditNoteController extends Controller
             return Reply::success("Credit Note {$creditNote->document_prefix}-{$creditNote->document_number} updated successfully!");
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error updating credit note', ['error' => $e]);
-            return Reply::error('An error occurred while updating the credit note.', 500);
+            Log::error("CreditNote update error: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return Reply::error('Error updating credit note: ' . $e->getMessage(), 500);
         }
     }
 
@@ -408,15 +536,16 @@ class CreditNoteController extends Controller
         try {
             $creditNote = BillingCreditNote::findOrFail($id);
             $creditNoteNumber = $creditNote->document_prefix . '-' . $creditNote->document_number;
+
             $creditNote->items()->delete();
             $creditNote->delete();
 
-            return Reply::success("Credit Note {$creditNoteNumber} deleted successfully!");
+            return Reply::success("Credit Note {$creditNoteNumber} deleted (soft deleted) successfully!");
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return Reply::notFound('The requested credit note was not found.');
         } catch (\Exception $e) {
-            Log::error('Error deleting credit note', ['error' => $e]);
-            return Reply::error('An error occurred while deleting the credit note.', 500);
+            Log::error("CreditNote destroy error: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return Reply::error('Error deleting credit note: ' . $e->getMessage(), 500);
         }
     }
 
@@ -468,11 +597,10 @@ class CreditNoteController extends Controller
      */
     public function download($id)
     {
-        $creditNote = BillingCreditNote::with(['items', 'customer', 'invoice'])->findOrFail($id);
-
+        $creditNote = BillingCreditNote::with(['items', 'company', 'branch', 'tax'])->findOrFail($id);
         // Example: generate PDF
         $pdf = \PDF::loadView('billing.credit-notes.pdf', compact('creditNote'));
-        return $pdf->download("CreditNote-" . $creditNote->document_number . ".pdf");
+        return $pdf->download("CreditNote-{$creditNote->id}.pdf");
     }
 
     /**
@@ -483,13 +611,8 @@ class CreditNoteController extends Controller
      */
     public function print($id)
     {
-        $creditNote = BillingCreditNote::with(['items', 'customer', 'invoice'])->findOrFail($id);
-
-        // You can either return a blade view that's print-optimized:
+        $creditNote = BillingCreditNote::with(['items', 'company', 'branch', 'tax'])->findOrFail($id);
+        // You can return a special print view
         return view('billing.credit-notes.print', compact('creditNote'));
-
-        // OR if you want a PDF instead:
-        // $pdf = \PDF::loadView('billing.credit-notes.pdf', compact('creditNote'));
-        // return $pdf->stream('CreditNote-' . $creditNote->document_number . '.pdf');
     }
 }

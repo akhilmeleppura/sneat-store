@@ -81,7 +81,7 @@
                                     <tr>
                                         <td class="pe-4">Total Due:</td>
                                         <td class="fw-medium">
-                                            ${{ number_format($debitNote->sub_total - ($debitNote->document_discount_amount ?? 0) + ($debitNote->tax_amount ?? 0), 2) }}
+                                            ${{ number_format($debitNote->total_amount, 2) }}
                                         </td>
                                     </tr>
                                     @if ($debitNote->branch && $debitNote->branch->bank_name)
@@ -175,9 +175,9 @@
                                             -${{ number_format($debitNote->document_discount_amount, 2) }}</p>
                                     @endif
                                     <p class="fw-medium mb-2 border-bottom pb-2">
-                                        ${{ number_format($debitNote->tax_amount ?? 0, 2) }}</p>
+                                        ${{ number_format($debitNote->tax_amount, 2) }}</p>
                                     <p class="fw-medium mb-0">
-                                        ${{ number_format($debitNote->sub_total - ($debitNote->document_discount_amount ?? 0) + ($debitNote->tax_amount ?? 0), 2) }}
+                                        ${{ number_format($debitNote->total_amount, 2) }}
                                     </p>
                                 </td>
                             </tr>

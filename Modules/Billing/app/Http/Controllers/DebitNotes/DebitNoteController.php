@@ -104,7 +104,7 @@ class DebitNoteController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function create()
+   public function create()
     {
         return $this->formData();
     }
@@ -191,9 +191,35 @@ class DebitNoteController extends Controller
         return collect($items)->sum(function ($item) {
             $qty = $item['quantity'] ?? 0;
             $price = $item['unit_price'] ?? 0;
-            $discount = $item['discount_percent'] ?? 0;
-            return ($qty * $price) - $discount;
+            return $qty * $price;
         });
+    }
+
+    /**
+     * Calculate tax amount for debit note.
+     *
+     * @param float $subtotal
+     * @param float $discountAmount
+     * @param int|null $taxId
+     * @return float
+     */
+    private function calculateTaxAmount(float $subtotal, float $discountAmount, ?int $taxId): float
+    {
+        if (!$taxId) {
+            return 0;
+        }
+        
+        $tax = Tax::find($taxId);
+        if (!$tax) {
+            return 0;
+        }
+        
+        $taxableAmount = $subtotal - $discountAmount;
+        if ($taxableAmount < 0) {
+            $taxableAmount = 0;
+        }
+        
+        return ($taxableAmount * $tax->percentage) / 100;
     }
 
     /**
@@ -231,6 +257,17 @@ class DebitNoteController extends Controller
                 }
             }
 
+            // Calculate discount amount
+            $discountAmount = 0;
+            if ($request->document_discount_type == 1) { // Percentage
+                $discountAmount = ($subTotal * $request->document_discount_rate) / 100;
+            } else { // Fixed amount
+                $discountAmount = $request->document_discount_amount;
+            }
+
+            // Calculate tax amount
+            $taxAmount = $this->calculateTaxAmount($subTotal, $discountAmount, $request->tax_id);
+
             $debitNote = BillingDebitNote::create([
                 'document_prefix'          => $prefix,
                 'document_number'          => $number,
@@ -241,7 +278,7 @@ class DebitNoteController extends Controller
                 'sub_total'                => $subTotal,
                 'document_discount_type'   => $request->document_discount_type,
                 'document_discount_rate'   => $request->document_discount_rate,
-                'document_discount_amount' => $request->document_discount_amount,
+                'document_discount_amount' => $discountAmount,
                 'document_tax_id'          => $request->tax_id,
                 'note'                     => $request->note ?? '',
                 'company_id'               => $user->company_id,
@@ -280,7 +317,8 @@ class DebitNoteController extends Controller
      */
     public function show($id)
     {
-        $debitNote = BillingDebitNote::with(['items.item', 'items.tax', 'invoice', 'createdBy', 'company', 'branch'])
+        // *** CHANGE: Added 'tax' to the with() clause to eager-load the tax relationship ***
+        $debitNote = BillingDebitNote::with(['items.item', 'items.tax', 'tax', 'invoice', 'createdBy', 'company', 'branch'])
             ->findOrFail($id);
 
         // Get branch logo
@@ -381,14 +419,44 @@ class DebitNoteController extends Controller
                 }
             }
 
+            // Calculate subtotal from all items (existing and new)
+            $allItems = [];
+            
+            // Add existing items
+            if ($request->has('existing_items')) {
+                foreach ($request->existing_items as $itemData) {
+                    $allItems[] = $itemData;
+                }
+            }
+            
+            // Add new items
+            if ($request->has('items')) {
+                foreach ($request->items as $itemData) {
+                    $allItems[] = $itemData;
+                }
+            }
+            
+            $subTotal = $this->calculateSubtotal($allItems);
+
+            // Calculate discount amount
+            $discountAmount = 0;
+            if ($request->document_discount_type == 1) { // Percentage
+                $discountAmount = ($subTotal * $request->document_discount_rate) / 100;
+            } else { // Fixed amount
+                $discountAmount = $request->document_discount_amount;
+            }
+
+            // Calculate tax amount
+            $taxAmount = $this->calculateTaxAmount($subTotal, $discountAmount, $request->tax_id);
+
             $debitNote->invoice_id               = $request->invoice_id;
             $debitNote->customer_id              = $customerId;
             $debitNote->issue_date               = $request->issue_date;
             $debitNote->due_date                 = $request->due_date;
-            $debitNote->sub_total                = $this->calculateSubtotal($request->items ?? $request->existing_items ?? []);
+            $debitNote->sub_total                = $subTotal;
             $debitNote->document_discount_type   = $request->document_discount_type;
             $debitNote->document_discount_rate   = $request->document_discount_rate;
-            $debitNote->document_discount_amount = $request->document_discount_amount;
+            $debitNote->document_discount_amount = $discountAmount;
             $debitNote->document_tax_id          = $request->tax_id;
             $debitNote->note                     = $request->note ?? '';
             $debitNote->updated_by               = auth()->user()->id;
@@ -473,7 +541,7 @@ class DebitNoteController extends Controller
      */
     public function download($id)
     {
-        $debitNote = BillingDebitNote::with(['items', 'company', 'branch'])->findOrFail($id);
+        $debitNote = BillingDebitNote::with(['items', 'company', 'branch', 'tax'])->findOrFail($id);
         // Example: generate PDF
         $pdf = \PDF::loadView('billing.debit-notes.pdf', compact('debitNote'));
         return $pdf->download("DebitNote-{$debitNote->id}.pdf");
@@ -487,7 +555,7 @@ class DebitNoteController extends Controller
      */
     public function print($id)
     {
-        $debitNote = BillingDebitNote::with(['items', 'company', 'branch'])->findOrFail($id);
+        $debitNote = BillingDebitNote::with(['items', 'company', 'branch', 'tax'])->findOrFail($id);
         // You can return a special print view
         return view('billing.debit-notes.print', compact('debitNote'));
     }

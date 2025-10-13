@@ -349,7 +349,10 @@
 
             document.getElementById("sub_total").value = subtotal.toFixed(2);
             document.getElementById("document_discount_amount").value = discountAmount.toFixed(2);
-            document.getElementById("tax_amount").value = taxAmount.toFixed(2);
+            
+            // *** UPDATED THIS LINE ***
+            document.getElementById("document_tax_amount").value = taxAmount.toFixed(2);
+            
             document.getElementById("total_amount").value = grandTotal.toFixed(2);
             document.getElementById("tax_id").value = taxId;
             let discountTypeInt = discountType === "%" ? 1 : 2;
@@ -616,7 +619,10 @@
                         <input type="hidden" name="document_discount_rate" id="document_discount_rate" value="0">
                         <input type="hidden" name="document_discount_amount" id="document_discount_amount" value="0">
                         <input type="hidden" name="tax_id" id="tax_id" value="0">
-                        <input type="hidden" name="tax_amount" id="tax_amount" value="0">
+
+                        <!-- *** UPDATED THIS LINE: Changed name and id from tax_amount *** -->
+                        <input type="hidden" name="document_tax_amount" id="document_tax_amount" value="0">
+
                         <input type="hidden" name="total_amount" id="total_amount" value="0">
                         <input type="hidden" name="payment_status" value="unpaid">
                         <div class="credit-note-form-container">
