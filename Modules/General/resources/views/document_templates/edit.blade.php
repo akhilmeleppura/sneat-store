@@ -30,9 +30,12 @@
                     <label for="type" class="form-label">Document Type</label>
                     <select name="type" id="type" class="form-select" required>
                         <option value="">Select Document Type</option>
-                        <option value="invoice" {{ old('type', $template->type) == 'invoice' ? 'selected' : '' }}>Invoice</option>
-                        <option value="credit_note" {{ old('type', $template->type) == 'credit_note' ? 'selected' : '' }}>Credit Note</option>
-                        <option value="debit_note" {{ old('type', $template->type) == 'debit_note' ? 'selected' : '' }}>Debit Note</option>
+                        <option value="invoice" {{ old('type', $template->type) == 'invoice' ? 'selected' : '' }}>Invoice
+                        </option>
+                        <option value="credit_note" {{ old('type', $template->type) == 'credit_note' ? 'selected' : '' }}>
+                            Credit Note</option>
+                        <option value="debit_note" {{ old('type', $template->type) == 'debit_note' ? 'selected' : '' }}>
+                            Debit Note</option>
                     </select>
                 </div>
 
@@ -41,9 +44,9 @@
                     <label for="template_id" class="form-label">Select Template</label>
                     <select name="template_id" id="template_id" class="form-select">
                         <option value="">Select a Template Design</option>
-                        @foreach($templateDesigns as $design)
-                            <option value="{{ $design->id }}" 
-                                {{ (old('template_id', $template->template_id) == $design->id) ? 'selected' : '' }}>
+                        @foreach ($templateDesigns as $design)
+                            <option value="{{ $design->id }}"
+                                {{ old('template_id', $template->template_id) == $design->id ? 'selected' : '' }}>
                                 {{ $design->name }}
                             </option>
                         @endforeach

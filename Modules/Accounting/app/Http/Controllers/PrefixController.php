@@ -18,11 +18,15 @@ class PrefixController extends Controller
      */
     public function index()
     {
+        $moduleName = 'Accounting'; // module name to pass
         $currentRoute = request()->route()->getName();
-        $menu = MenuService::getMenu($currentRoute);
 
-        return view('accounting::accounting.prefix', compact('menu'));
+        // Pass module name and current route to MenuService
+        $menu = MenuService::getMenu($moduleName, $currentRoute);
+
+        return view('accounting::accounting.prefix', compact('menu', 'moduleName'));
     }
+
 
     /**
      * Show the form for creating a new Prefix.

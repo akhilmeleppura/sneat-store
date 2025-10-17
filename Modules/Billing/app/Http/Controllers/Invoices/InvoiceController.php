@@ -127,24 +127,18 @@ class InvoiceController extends Controller
      */
     public function show($invoiceId)
     {
-        $invoice = BillingInvoice::with([
-            'customer',
-            'items.billingItem',
-            'items.company',
-            'items.branch',
-            'debitNotes',
-            'creditNotes',
-            'template',
-            'status'
-        ])->findOrFail($invoiceId);
+        // *** CHANGE: Added 'tax' to the with() clause to eager-load the tax relationship ***
+        $invoice = BillingInvoice::with(['items.billingItem', 'items.tax', 'tax', 'customer', 'createdBy', 'company', 'branch'])
+            ->findOrFail($invoiceId);
 
+        // Get branch logo
         $branchLogo = null;
         if ($invoice->branch) {
             $extensions = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'];
             foreach ($extensions as $ext) {
-                $path = public_path("storage/branch_logos/{$invoice->branch->id}.{$ext}");
+                $path = public_path('storage/branch_logos/' . $invoice->branch->id . '.' . $ext);
                 if (file_exists($path)) {
-                    $branchLogo = asset("storage/branch_logos/{$invoice->branch->id}.{$ext}");
+                    $branchLogo = asset('storage/branch_logos/' . $invoice->branch->id . '.' . $ext);
                     break;
                 }
             }
@@ -152,23 +146,20 @@ class InvoiceController extends Controller
 
         $branchId = $invoice->items->first()?->branch_id;
 
+        // Fetch the template directly from DocumentTemplate
         $template = DocumentTemplate::where('company_id', auth()->user()->company_id)
             ->where('branch_id', $branchId)
             ->where('type', 'invoice')
             ->first();
 
+        // Use the path from the fetched template, fallback to default
         $templateView = Template::find($template?->template_id)?->path ?? 'HS.Templates.standard_header_footer';
-
-        $headerHeight = $template?->header_height;
-        $footerHeight = $template?->footer_height;
 
         return view('billing::invoices.show', compact(
             'invoice',
-            'templateView',
-            'template',
             'branchLogo',
-            'headerHeight',
-            'footerHeight'
+            'templateView',
+            'template'
         ));
     }
 
@@ -360,7 +351,6 @@ class InvoiceController extends Controller
                         BillingInvoiceItem::create([
                             'document_id'        => $invoice->id,
                             'item_id'            => $itemData['item_id'],
-                            'description'        => $itemData['description'] ?? '',
                             'quantity'           => $itemData['quantity'],
                             'selling_unit_price' => $itemData['unit_price'],
                             'tax_id'             => $itemData['tax_id'] ?? null,

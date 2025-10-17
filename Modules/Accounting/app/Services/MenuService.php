@@ -4,20 +4,24 @@ namespace Modules\Accounting\Services;
 
 class MenuService
 {
-    public static function getMenu($currentRoute)
+    public static function getMenu($moduleName, $currentRoute)
 {
-    $menuJson = file_get_contents(module_path('Accounting', 'Resources/json/submenu.json'));
+    $menuPath = module_path($moduleName, 'Resources/json/submenu.json');
+
+    if (!file_exists($menuPath)) {
+        return [];
+    }
+
+    $menuJson = file_get_contents($menuPath);
     $menuData = json_decode($menuJson, true);
-    
-    return collect($menuData['menu'])->map(function($item) use ($currentRoute) {
+
+    return collect($menuData['menu'])->map(function ($item) use ($currentRoute) {
         $item['active'] = request()->is(trim($item['url'], '/'));
-        
-        // Ensure identifier exists
         if (!isset($item['identifier'])) {
             $item['identifier'] = strtolower(str_replace(' ', '_', $item['label']));
         }
-        
         return $item;
     })->toArray();
 }
+
 }

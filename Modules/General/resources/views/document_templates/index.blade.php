@@ -170,8 +170,9 @@
                     <label for="template_id" class="form-label">Select Template</label>
                     <select name="template_id" id="template_id" class="form-select">
                         <option value="">Select a Template Design</option>
-                        @foreach($templateDesigns as $design)
-                            <option value="{{ $design->id }}" {{ (old('template_id') == $design->id) ? 'selected' : '' }}>{{ $design->name }}</option>
+                        @foreach ($templateDesigns as $design)
+                            <option value="{{ $design->id }}" {{ old('template_id') == $design->id ? 'selected' : '' }}>
+                                {{ $design->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -223,7 +224,7 @@
                             <tr>
                                 <td>{{ $template->name }}</td>
                                 <td>
-                                    @if($template->template)
+                                    @if ($template->template)
                                         <span class="badge bg-info">{{ $template->template->name }}</span>
                                     @else
                                         <span class="text-muted">—</span>

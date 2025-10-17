@@ -2,7 +2,6 @@
 
 @section('title', 'Ledger Entries')
 
-
 @section('content')
     <div class="card">
         <div class="card-header border-bottom">
@@ -19,37 +18,32 @@
 @endsection
 
 @section('page-script')
-    @vite(['resources/js/HS/data-table.js']) <!-- This is your JS file -->
+    @vite(['resources/js/HS/data-table.js'])
 
     <script>
         window.dataTableConfig = {
             ajaxUrl: "{{ route('accounting.ledger.entriesList') }}",
             actionsRoutePrefix: '/accounting/ledger',
+
+            // 👇 Set this to true to completely hide the "Add" button
+            hideAddButton: true,
+
             addButton: {
                 label: 'Add Ledger',
                 url: "{{ route('accounting.ledger.create') }}"
             },
+
             columns: {
-                id: {
-                    type: 'text'
-                },
-                account_name: {
-                    type: 'link',
-                    linkTo: '/accounting/ledger', // This is base URL
-                    linkSuffix: '/view' // Suffix to append after ID
-                },
-                sub_category: {
-                    type: 'text'
-                },
-                main_category: {
-                    type: 'text'
-                }
+                id: { type: 'text' },
+                account_name: { type: 'link', linkTo: '/accounting/ledger', linkSuffix: '/view' },
+                sub_category: { type: 'text' },
+                main_category: { type: 'text' }
             },
+
             permissions: {
                 canView: true,
                 canAdd: true
             }
         };
     </script>
-
 @endsection

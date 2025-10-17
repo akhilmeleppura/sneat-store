@@ -9,7 +9,7 @@
         <!-- Navigation -->
         <div class="col-12 col-lg-4">
             <div class="d-flex justify-content-between flex-column mb-4 mb-md-0">
-                <h5 class="mb-4">Getting Started</h5>
+                <h5 class="mb-4">Setting For {{ ucfirst($moduleName) }}</h5>
                 @include('accounting::accounting.accounting-menu')
             </div>
         </div>

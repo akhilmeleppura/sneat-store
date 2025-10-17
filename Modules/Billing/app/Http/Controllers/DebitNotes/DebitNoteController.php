@@ -104,7 +104,7 @@ class DebitNoteController extends Controller
      *
      * @return \Illuminate\View\View
      */
-   public function create()
+    public function create()
     {
         return $this->formData();
     }
@@ -208,17 +208,17 @@ class DebitNoteController extends Controller
         if (!$taxId) {
             return 0;
         }
-        
+
         $tax = Tax::find($taxId);
         if (!$tax) {
             return 0;
         }
-        
+
         $taxableAmount = $subtotal - $discountAmount;
         if ($taxableAmount < 0) {
             $taxableAmount = 0;
         }
-        
+
         return ($taxableAmount * $tax->percentage) / 100;
     }
 
@@ -421,21 +421,21 @@ class DebitNoteController extends Controller
 
             // Calculate subtotal from all items (existing and new)
             $allItems = [];
-            
+
             // Add existing items
             if ($request->has('existing_items')) {
                 foreach ($request->existing_items as $itemData) {
                     $allItems[] = $itemData;
                 }
             }
-            
+
             // Add new items
             if ($request->has('items')) {
                 foreach ($request->items as $itemData) {
                     $allItems[] = $itemData;
                 }
             }
-            
+
             $subTotal = $this->calculateSubtotal($allItems);
 
             // Calculate discount amount

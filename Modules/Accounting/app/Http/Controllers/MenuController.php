@@ -6,41 +6,66 @@ use App\Http\Controllers\Controller;
 
 class MenuController extends Controller
 {
+    /**
+     * Defines the menu structure and placement for the Accounting module.
+     */
     public function getMenu()
     {
         return [
             'is_active' => true,
-            'menu' => [
-                [
-                    'name' => 'Accounting',
-                    'slug' => 'accounting.index',
-                    'url'  => '/accounting',
-                    'icon' => 'bx bx-book',
-                    'permissions' => 'user.view',
-                    'submenu' => [
+            'placement' => [
+                // Configuration for the "General Settings" menu
+                'general' => [
+                    'is_active' => true, // Show in General Settings?
+                    'menu' => [
                         [
                             'name' => 'Accounting',
-                            'slug' => 'accounting.index',
-                            'url'  => '/accounting/chart-of-accounts',
-                            'permissions' => 'user.view'
-                        ],
+                            'slug' => 'accounting.general.index',
+                            'url'  => 'accounting/chart-of-accounts',
+                            'icon' => 'bx bx-book-alt',
+                            'permissions' => 'accounting.view',
+                            'submenu' => [
+                                [
+                                    'name' => 'Accounting',
+                                    'slug' => 'accounting.index',
+                                    'url'  => '/accounting/chart-of-accounts',
+                                    'permissions' => 'user.view'
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+
+                // Configuration for the "Settings" menu
+                'settings' => [
+                    'is_active' => true, // Show in Settings?
+                    'menu' => [
                         [
-                            'name' => 'Journal',
-                            'slug' => 'accounting.Journal.index',
-                            'url'  => 'accounting/journal',
-                            'permissions' => 'user.view'
-                        ],
-                        [
-                            'name' => 'Ledger',
-                            'slug' => 'accounting.ledger.index',
-                            'url'  => 'accounting/ledger',
-                            'permissions' => 'user.view'
-                        ],
-                        [
-                            'name' => 'Trial Balance',
-                            'slug' => 'accounting.trial-balance.index',
-                            'url'  => 'accounting/trial-balance',
-                            'permissions' => 'user.view'
+                            'name' => 'Accounting',
+                            'slug' => 'accounting.settings.index',
+                            'url'  => 'accounting/settings',
+                            'icon' => 'bx bx-cog',
+                            'permissions' => 'accounting.settings.view',
+                            'submenu' => [
+                                [
+                                    'name' => 'Journal',
+                                    'slug' => 'accounting.Journal.index',
+                                    'url'  => 'accounting/journal',
+                                    'permissions' => 'user.view'
+                                ],
+                                [
+                                    'name' => 'Ledger',
+                                    'slug' => 'accounting.ledger.index',
+                                    'url'  => 'accounting/ledger',
+                                    'permissions' => 'user.view'
+                                ],
+                                [
+                                    'name' => 'Trial Balance',
+                                    'slug' => 'accounting.trial-balance.index',
+                                    'url'  => 'accounting/trial-balance',
+                                    'permissions' => 'user.view'
+                                ]
+                            ]
                         ]
                     ]
                 ]

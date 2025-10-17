@@ -63,17 +63,17 @@ document.addEventListener('DOMContentLoaded', function () {
       render: function (data, type, full) {
         let actionButtons = '<div class="d-flex align-items-center gap-2">';
 
-        if (config.permissions.canView) {
+        if (config.permissions?.canView) {
           actionButtons += `<a href="${config.actionsRoutePrefix}/${full.id}/view" class="btn btn-sm btn-info">View</a>`;
         }
-        if (config.permissions.canEdit) {
+        if (config.permissions?.canEdit) {
           actionButtons += `<a href="${config.actionsRoutePrefix}/${full.id}/edit" class="btn btn-sm btn-warning">Edit</a>`;
         }
-        if (config.permissions.canDelete) {
+        if (config.permissions?.canDelete) {
           actionButtons += `
-                        <button class="btn btn-sm btn-danger delete-journal" data-url="${config.actionsRoutePrefix}/${full.id}">
-                            <i class="bx bx-trash"></i>
-                        </button>`;
+            <button class="btn btn-sm btn-danger delete-journal" data-url="${config.actionsRoutePrefix}/${full.id}">
+              <i class="bx bx-trash"></i>
+            </button>`;
         }
 
         actionButtons += '</div>';
@@ -106,19 +106,25 @@ document.addEventListener('DOMContentLoaded', function () {
         searchPlaceholder: 'Search...'
       },
       buttons: [
-        {
-          extend: 'collection',
-          className: 'btn btn-label-primary dropdown-toggle me-2',
-          text: '<i class="bx bx-export me-sm-2"></i>Export',
-          buttons: [
-            { extend: 'copy', text: '<i class="bx bx-copy me-1"></i>Copy' },
-            { extend: 'csv', text: '<i class="bx bx-file me-1"></i>CSV' },
-            { extend: 'excel', text: '<i class="bx bx-spreadsheet me-1"></i>Excel' },
-            { extend: 'pdf', text: '<i class="bx bxs-file-pdf me-1"></i>PDF' },
-            { extend: 'print', text: '<i class="bx bx-printer me-1"></i>Print' }
-          ]
-        },
-        ...(config.permissions.canAdd
+        // Export button (only shown if not hidden)
+        ...(config.hideExportButton
+          ? []
+          : [
+              {
+                extend: 'collection',
+                className: 'btn btn-label-primary dropdown-toggle me-2',
+                text: '<i class="bx bx-export me-sm-2"></i>Export',
+                buttons: [
+                  { extend: 'copy', text: '<i class="bx bx-copy me-1"></i>Copy' },
+                  { extend: 'csv', text: '<i class="bx bx-file me-1"></i>CSV' },
+                  { extend: 'excel', text: '<i class="bx bx-spreadsheet me-1"></i>Excel' },
+                  { extend: 'pdf', text: '<i class="bx bxs-file-pdf me-1"></i>PDF' },
+                  { extend: 'print', text: '<i class="bx bx-printer me-1"></i>Print' }
+                ]
+              }
+            ]),
+        // Add button (hidden if hideAddButton = true)
+        ...(config.permissions?.canAdd && !config.hideAddButton && config.addButton?.url
           ? [
               {
                 text: `<i class="bx bx-plus me-sm-2"></i> ${config.addButton.label}`,
@@ -133,10 +139,10 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     /** Delete Action with SweetAlert **/
-    let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     $(document).on('click', '.delete-journal', function (e) {
       e.preventDefault();
-      let url = $(this).data('url');
+      const url = $(this).data('url');
       Swal.fire({
         title: 'Are you sure?',
         text: "You won't be able to revert this!",

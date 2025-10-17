@@ -19,14 +19,21 @@ class SubCategoryController extends Controller
      */
     public function index()
     {
+        $moduleName = 'Accounting'; // module name to pass
         $currentRoute = request()->route()->getName();
-        $menu = MenuService::getMenu($currentRoute);
+
+        // Pass module name and current route to MenuService
+        $menu = MenuService::getMenu($moduleName, $currentRoute);
 
         $subCategories = SubCategory::with('mainCategory')->get();
         $mainCategories = MainCategory::all();
 
-        return view('accounting::accounting.subcategory', compact('menu', 'mainCategories', 'subCategories'));
+        return view(
+            'accounting::accounting.subcategory',
+            compact('menu', 'mainCategories', 'subCategories', 'moduleName')
+        );
     }
+
 
     /**
      * Show the form for creating a new Sub Category.

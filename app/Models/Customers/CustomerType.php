@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class CustomerType extends Model
 {
-    protected $fillable = ['name'];
+  protected $fillable = ['name'];
 
-      public function customers()
-    {
-        return $this->hasMany(Customer::class, 'customer_type_id', 'id');
-    }
+  public $timestamps = true;
+
+  public function customers()
+  {
+    return $this->hasMany(Customer::class, 'customer_type_id', 'id');
+  }
 }

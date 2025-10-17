@@ -7,7 +7,7 @@
         <div class="tab-pane fade show active" id="chart_of_accounts" role="tabpanel">
             <div class="card mb-6">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title m-0">Chart of Accounts</h5>
+                <h5 class="mb-4">Setting For {{ ucfirst($moduleName) }}</h5>
                     <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addAccountModal">
                         + Add New Account
                     </button>

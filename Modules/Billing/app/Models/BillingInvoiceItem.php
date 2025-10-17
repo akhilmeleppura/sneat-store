@@ -17,26 +17,51 @@ class BillingInvoiceItem extends Model
     protected $fillable = [
         'document_id',
         'item_id',
-        'tax_id',
-        'company_id',
-        'branch_id',
         'quantity',
         'selling_unit_price',
+        'tax_id',
         'discount_rate',
         'discount_amount',
         'discount_type',
         'subtotal',
+        'company_id',
+        'branch_id'
     ];
 
-    public $timestamps = true;
+    // Add this method to calculate tax amount for each item
+    public function getTaxAmountAttribute()
+    {
+        if (!$this->tax_id) {
+            return 0;
+        }
 
-    protected $casts = [
-        'taxes' => 'array',
-    ];
+        $tax = Tax::find($this->tax_id);
+        if (!$tax) {
+            return 0;
+        }
 
-    /* ----------------------
-       Relationships
-    ---------------------- */
+        $itemTotal = $this->quantity * $this->selling_unit_price;
+        $discountAmount = ($itemTotal * $this->discount_rate) / 100;
+        $totalAfterDiscount = $itemTotal - $discountAmount;
+
+        return ($totalAfterDiscount * $tax->percentage) / 100;
+    }
+
+    public function document()
+    {
+        return $this->belongsTo(BillingInvoice::class, 'document_id');
+    }
+
+    public function billingItem()
+    {
+        return $this->belongsTo(BillingItem::class, 'item_id');
+    }
+
+    public function tax()
+    {
+        return $this->belongsTo(Tax::class, 'tax_id');
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class, 'company_id');
@@ -45,21 +70,6 @@ class BillingInvoiceItem extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class, 'branch_id');
-    }
-
-    public function invoice()
-    {
-        return $this->belongsTo(BillingInvoice::class, 'document_id', 'id');
-    }
-
-    public function billingItem()
-    {
-        return $this->belongsTo(BillingItem::class, 'item_id', 'id');
-    }
-
-    public function tax()
-    {
-        return $this->belongsTo(Tax::class, 'tax_id', 'id');
     }
 
     /* ----------------------
@@ -80,16 +90,6 @@ class BillingInvoiceItem extends Model
         }
         $rate = $this->discount_rate ?? 0;
         return $this->line_subtotal * ($rate / 100);
-    }
-
-    // Tax amount
-    public function getTaxAmountAttribute()
-    {
-        if ($this->tax && $this->tax->rate > 0) {
-            $base = $this->line_subtotal - $this->discount_amount;
-            return $base * ($this->tax->rate / 100);
-        }
-        return 0;
     }
 
     // Total price after discount + tax

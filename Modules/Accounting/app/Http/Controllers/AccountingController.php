@@ -25,15 +25,22 @@ class AccountingController extends Controller
      */
     public function index()
     {
+        $moduleName = 'Accounting'; // module name to pass dynamically
         $currentRoute = request()->route()->getName();
-        $menu = MenuService::getMenu($currentRoute);
+
+        // Pass module name and current route to MenuService
+        $menu = MenuService::getMenu($moduleName, $currentRoute);
 
         $mainCategories = MainCategory::all();
         $subcategories = SubCategory::all();
         $accounts = ChartOfAccount::with(['mainCategory', 'subCategory'])->get();
 
-        return view('accounting::accounting.accounting', compact('menu', 'mainCategories', 'subcategories', 'accounts'));
+        return view(
+            'accounting::accounting.accounting',
+            compact('menu', 'mainCategories', 'subcategories', 'accounts', 'moduleName')
+        );
     }
+
 
     /**
      * Show the form for creating a new account chart.

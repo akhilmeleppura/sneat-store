@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-            Schema::create('customer_types', function (Blueprint $table) {
+        Schema::create('customer_types', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
             $table->timestamps();
@@ -27,19 +27,20 @@ return new class extends Migration
 
             // Foreign key to customer_types
             $table->foreignId('customer_type_id')
-                  ->constrained('customer_types')
-                  ->onDelete('cascade');
+                ->constrained('customer_types')
+                ->onDelete('cascade');
 
             $table->timestamps();
         });
     }
-    
+
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-  Schema::dropIfExists('customers');
- Schema::dropIfExists('customer_types');    }
+        Schema::dropIfExists('customers');
+        Schema::dropIfExists('customer_types');
+    }
 };

@@ -9,32 +9,63 @@ class MenuController extends Controller
     public function getMenu()
     {
         return [
+            // Master switch to enable/disable the entire module's menu
             'is_active' => true,
-            'menu' => [
-                [
-                    'name' => 'Billings',
-                    'slug' => 'Billings',
-                    'url'  => '#',
-                    'icon' => 'bx bx-calculator',
-                    'permissions' => 'user.view',
-                    'submenu' => [
+
+            // Define where the menu appears and what it contains
+            'placement' => [
+                // Configuration for the "General Settings" menu
+                'general' => [
+                    'is_active' => true, // Show in General Settings
+                    'menu' => [
                         [
-                            'name' => 'Invoices',
-                            'slug' => 'accounting.billings.index',
-                            'url'  => 'accounting/billings',
-                            'permissions' => 'user.view'
-                        ],
+                            'name' => 'Billing',
+                            'slug' => 'billing.settings.general',
+                            'url'  => 'billing/settings/general',
+                            'icon' => 'bx bx-cog',
+                            'permissions' => 'billing.settings.view',
+                            'submenu' => [
+                                [
+                                    'name' => 'Invoice Numbering',
+                                    'slug' => 'billing.settings.invoice-numbering',
+                                    'url'  => 'samplemodule/sample-page-1',
+                                    'permissions' => 'billing.settings.invoice-numbering.view'
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+
+                // Configuration for the "Settings" menu
+                'settings' => [
+                    'is_active' => true, // Show in Settings
+                    'menu' => [
                         [
-                            'name' => 'Debit Notes',
-                            'slug' => 'accounting.debit-notes.index',
-                            'url'  => 'accounting/billings/debit-notes',
-                            'permissions' => 'user.view'
-                        ],
-                        [
-                            'name' => 'Credit Notes',
-                            'slug' => 'accounting.credit-notes.index',
-                            'url'  => 'accounting/billings/credit-notes',
-                            'permissions' => 'user.view'
+                            'name' => 'Billings',
+                            'slug' => 'billing.index',
+                            'url'  => 'billing',
+                            'icon' => 'bx bx-calculator',
+                            'permissions' => 'billing.view',
+                            'submenu' => [
+                                [
+                                    'name' => 'Invoices',
+                                    'slug' => 'accounting.billings.index',
+                                    'url'  => 'accounting/billings',
+                                    'permissions' => 'user.view'
+                                ],
+                                [
+                                    'name' => 'Debit Notes',
+                                    'slug' => 'accounting.debit-notes.index',
+                                    'url'  => 'accounting/billings/debit-notes',
+                                    'permissions' => 'user.view'
+                                ],
+                                [
+                                    'name' => 'Credit Notes',
+                                    'slug' => 'accounting.credit-notes.index',
+                                    'url'  => 'accounting/billings/credit-notes',
+                                    'permissions' => 'user.view'
+                                ]
+                            ]
                         ]
                     ]
                 ]
