@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Billing\App\Models\BillingInvoice;
 use Modules\Billing\App\Models\BillingInvoiceItem;
+use Modules\Billing\App\Models\BillingSettingPersionalisedPaymentOption;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -16,6 +17,7 @@ use Modules\General\App\Models\Company;
 use Modules\General\App\Models\Branch;
 use Modules\Billing\App\Models\BillingItem;
 use App\Models\Taxes\Tax;
+use App\Models\Payments\PaymentOption;
 use Modules\General\App\Models\Template;
 
 /**
@@ -127,7 +129,6 @@ class InvoiceController extends Controller
      */
     public function show($invoiceId)
     {
-        // *** CHANGE: Added 'tax' to the with() clause to eager-load the tax relationship ***
         $invoice = BillingInvoice::with(['items.billingItem', 'items.tax', 'tax', 'customer', 'createdBy', 'company', 'branch'])
             ->findOrFail($invoiceId);
 
@@ -187,6 +188,20 @@ class InvoiceController extends Controller
             $nextInvoiceNumber = $prefix . '0001';
         }
 
+        // *** CHANGE: START - Fetch ONLY the user's personalized payment options ***
+        $personalizedPaymentSettings = BillingSettingPersionalisedPaymentOption::where('user_id', $user->id)
+            ->where('company_id', $user->company_id)
+            ->where('branch_id', $user->branch_id)
+            ->first();
+
+        $personalizedPaymentOptions = collect(); // Start with an empty collection
+
+        if ($personalizedPaymentSettings && !empty($personalizedPaymentSettings->payment_options_id)) {
+            // Get only the payment options whose IDs are in the saved JSON array
+            $personalizedPaymentOptions = PaymentOption::whereIn('id', $personalizedPaymentSettings->payment_options_id)->get();
+        }
+        // *** CHANGE: END ***
+
         return view('billing::invoices.create', compact(
             'invoice',
             'clients',
@@ -194,7 +209,8 @@ class InvoiceController extends Controller
             'branch',
             'items',
             'taxes',
-            'nextInvoiceNumber'
+            'nextInvoiceNumber',
+            'personalizedPaymentOptions' // <-- CHANGE: Pass the new variable to the view
         ));
     }
 
@@ -215,6 +231,20 @@ class InvoiceController extends Controller
         $taxes = Tax::all();
         $invoiceNumber = $invoice->document_prefix . '-' . $invoice->document_number;
 
+        // *** CHANGE: START - Fetch ONLY the user's personalized payment options ***
+        $personalizedPaymentSettings = BillingSettingPersionalisedPaymentOption::where('user_id', $user->id)
+            ->where('company_id', $user->company_id)
+            ->where('branch_id', $user->branch_id)
+            ->first();
+
+        $personalizedPaymentOptions = collect(); // Start with an empty collection
+
+        if ($personalizedPaymentSettings && !empty($personalizedPaymentSettings->payment_options_id)) {
+            // Get only the payment options whose IDs are in the saved JSON array
+            $personalizedPaymentOptions = PaymentOption::whereIn('id', $personalizedPaymentSettings->payment_options_id)->get();
+        }
+        // *** CHANGE: END ***
+
         return view('billing::invoices.edit', compact(
             'invoice',
             'clients',
@@ -222,7 +252,8 @@ class InvoiceController extends Controller
             'branch',
             'items',
             'taxes',
-            'invoiceNumber'
+            'invoiceNumber',
+            'personalizedPaymentOptions' // <-- CHANGE: Pass the new variable to the view
         ));
     }
 
@@ -239,6 +270,7 @@ class InvoiceController extends Controller
             'client_id' => 'required|exists:customers,id',
             'issue_date' => 'required|date',
             'due_date' => 'required|date|after_or_equal:issue_date',
+            'payment_method_id' => 'nullable|exists:payment_options,id', // <-- CHANGE: Added validation
             'items' => 'required|array',
             'items.*.item_id' => 'required|exists:billing_items,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
@@ -262,6 +294,7 @@ class InvoiceController extends Controller
                 'document_discount_rate'   => $request->document_discount_rate,
                 'document_discount_amount' => $request->document_discount_amount,
                 'document_tax_id'          => $request->tax_id,
+                'payment_method_id'        => $request->payment_method_id, // <-- CHANGE: Added payment method
             ]);
 
             foreach ($request->items as $item) {
@@ -299,6 +332,7 @@ class InvoiceController extends Controller
             'client_id' => 'required|exists:customers,id',
             'issue_date' => 'required|date',
             'due_date' => 'required|date|after_or_equal:issue_date',
+            'payment_method_id' => 'nullable|exists:payment_options,id', // <-- CHANGE: Added validation
             'existing_items' => 'sometimes|array',
             'existing_items.*.id' => 'required|exists:billing_invoices_items,id',
             'existing_items.*.item_id' => 'required|exists:billing_items,id',
@@ -323,6 +357,7 @@ class InvoiceController extends Controller
             $invoice->document_discount_rate   = $request->document_discount_rate;
             $invoice->document_discount_amount = $request->document_discount_amount;
             $invoice->document_tax_id          = $request->tax_id;
+            $invoice->payment_method_id        = $request->payment_method_id; // <-- CHANGE: Added payment method
             $invoice->save();
 
             $existingItemIds = [];

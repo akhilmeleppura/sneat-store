@@ -5,10 +5,10 @@ use App\Http\Controllers\module_menu\ModuleMenuController;
 use App\Helpers\Helpers;
 
 // Load Configurations
- $configData = Helper::appClasses();
+$configData = Helper::appClasses();
 
 // 🚀 Get all categorized menus in a single call
- $categorizedMenus = (new ModuleMenuController)->getAllCategorizedMenus();
+$categorizedMenus = (new ModuleMenuController)->getAllCategorizedMenus();
 @endphp
 
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme"
@@ -68,15 +68,15 @@ use App\Helpers\Helpers;
       @endif
     @endforeach
 
-    {{-- ⚙️ General Settings (Dynamic - only shows if active modules exist) --}}
+    {{-- ⚙️ Settings (previously General Settings) --}}
     @if (!empty($categorizedMenus['general']))
       <li class="menu-header small">
-        <span class="menu-header-text">General Settings</span>
+        <span class="menu-header-text">Settings</span>
       </li>
       <li class="menu-item {{ request()->is('laravel/*') ? 'active open' : '' }}">
         <a href="javascript:void(0);" class="menu-link menu-toggle">
           <i class="menu-icon icon-base bx bx-cog"></i>
-          <div>General Settings</div>
+          <div>Settings</div>
         </a>
         <ul class="menu-sub">
           @foreach ($categorizedMenus['general'] as $moduleMenu)
@@ -118,15 +118,15 @@ use App\Helpers\Helpers;
       </li>
     @endif
 
-    {{-- ⚙️ Settings (Dynamic - only shows if active modules exist) --}}
+    {{-- 🧩 Modules (previously Settings) --}}
     @if (!empty($categorizedMenus['settings']))
       <li class="menu-header small">
-        <span class="menu-header-text">Settings</span>
+        <span class="menu-header-text">Modules</span>
       </li>
       <li class="menu-item {{ request()->is('laravel/*') ? 'active open' : '' }}">
         <a href="javascript:void(0);" class="menu-link menu-toggle">
-          <i class="menu-icon icon-base bx bx-cog"></i>
-          <div>Settings</div>
+          <i class="menu-icon icon-base bx bx-grid-alt"></i>
+          <div>Modules</div>
         </a>
         <ul class="menu-sub">
           @foreach ($categorizedMenus['settings'] as $moduleMenu)

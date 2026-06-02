@@ -7,11 +7,13 @@ use Illuminate\Http\Request;
 use Modules\Billing\App\Models\BillingCreditNote;
 use Modules\Billing\App\Models\BillingCreditNoteItem;
 use Modules\Billing\App\Models\BillingInvoice;
+use Modules\Billing\App\Models\BillingSettingPersionalisedPaymentOption;
 use App\Models\Customers\Customer;
 use Modules\General\App\Models\Company;
 use Modules\General\App\Models\Branch;
 use Modules\Billing\App\Models\BillingItem;
 use App\Models\Taxes\Tax;
+use App\Models\Payments\PaymentOption;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -90,9 +92,9 @@ class CreditNoteController extends Controller
                     $taxAmount = ($taxableAmount * $tax->percentage) / 100;
                 }
             }
-            
+
             $balance = $creditNote->sub_total - ($creditNote->document_discount_amount ?? 0) + $taxAmount;
-            
+
             return [
                 'credit_note_id'     => $creditNote->id,
                 'credit_note_status' => $creditNote->payment_status,
@@ -153,6 +155,20 @@ class CreditNoteController extends Controller
         $invoices = BillingInvoice::with('customer')->limit(100)->get();
         $nextCreditNoteNumber = $this->getNextCreditNoteNumber();
 
+        // *** CHANGE: START - Fetch ONLY the user's personalized payment options ***
+        $personalizedPaymentSettings = BillingSettingPersionalisedPaymentOption::where('user_id', $user->id)
+            ->where('company_id', $user->company_id)
+            ->where('branch_id', $user->branch_id)
+            ->first();
+
+        $personalizedPaymentOptions = collect(); // Start with an empty collection
+
+        if ($personalizedPaymentSettings && !empty($personalizedPaymentSettings->payment_options_id)) {
+            // Get only the payment options whose IDs are in the saved JSON array
+            $personalizedPaymentOptions = PaymentOption::whereIn('id', $personalizedPaymentSettings->payment_options_id)->get();
+        }
+        // *** CHANGE: END ***
+
         return view('billing::credit-notes.create', compact(
             'creditNote',
             'company',
@@ -161,7 +177,8 @@ class CreditNoteController extends Controller
             'taxes',
             'invoices',
             'invoice',
-            'nextCreditNoteNumber'
+            'nextCreditNoteNumber',
+            'personalizedPaymentOptions' // <-- CHANGE: Pass the new variable to the view
         ));
     }
 
@@ -223,17 +240,17 @@ class CreditNoteController extends Controller
         if (!$taxId) {
             return 0;
         }
-        
+
         $tax = Tax::find($taxId);
         if (!$tax) {
             return 0;
         }
-        
+
         $taxableAmount = $subtotal - $discountAmount;
         if ($taxableAmount < 0) {
             $taxableAmount = 0;
         }
-        
+
         return ($taxableAmount * $tax->percentage) / 100;
     }
 
@@ -255,63 +272,79 @@ class CreditNoteController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'tax_id' => 'nullable|exists:taxes,id',
+            // *** CHANGE: ADDED VALIDATION FOR PAYMENT METHOD ID ***
+            'payment_method_id' => 'nullable|exists:payment_options,id',
         ]);
 
         DB::beginTransaction();
         try {
             $user = auth()->user();
             [$prefix, $number] = $this->parseDocumentNumber($request->credit_note_number);
-            $subTotal = $this->calculateSubtotal($request->items);
 
-            // Get customer_id from associated invoice if available, otherwise set to null
+            // Determine company and branch
+            $companyId = $user->company_id ?? Company::first()->id;
+            $branchId = $user->branch_id ?? Branch::first()->id;
+
+            // Get customer from invoice if provided
             $customerId = null;
             if ($request->invoice_id) {
                 $invoice = BillingInvoice::find($request->invoice_id);
                 if ($invoice) {
                     $customerId = $invoice->customer_id;
+                    $companyId = $invoice->company_id ?? $companyId;
+                    $branchId = $invoice->branch_id ?? $branchId;
                 }
             }
 
-            // Calculate discount amount
+            // Calculate subtotal
+            $subTotal = $this->calculateSubtotal($request->items);
+
+            // Calculate discount
             $discountAmount = 0;
             if ($request->document_discount_type == 1) { // Percentage
                 $discountAmount = ($subTotal * $request->document_discount_rate) / 100;
-            } else { // Fixed amount
-                $discountAmount = $request->document_discount_amount;
+            } else {
+                $discountAmount = $request->document_discount_amount ?? 0;
             }
 
-            // Calculate tax amount
+            // Calculate tax
             $taxAmount = $this->calculateTaxAmount($subTotal, $discountAmount, $request->tax_id);
 
+            // Create credit note
             $creditNote = BillingCreditNote::create([
-                'document_prefix'          => $prefix,
-                'document_number'          => $number,
-                'invoice_id'               => $request->invoice_id,
-                'customer_id'              => $customerId,
-                'issue_date'               => $request->issue_date,
-                'due_date'                 => $request->due_date,
-                'sub_total'                => $subTotal,
-                'document_discount_type'   => $request->document_discount_type,
-                'document_discount_rate'   => $request->document_discount_rate,
+                'document_prefix' => $prefix,
+                'document_number' => $number,
+                'invoice_id' => $request->invoice_id,
+                'customer_id' => $customerId,
+                'issue_date' => $request->issue_date,
+                'due_date' => $request->due_date,
+                'sub_total' => $subTotal,
+                'document_discount_type' => $request->document_discount_type,
+                'document_discount_rate' => $request->document_discount_rate,
                 'document_discount_amount' => $discountAmount,
-                'document_tax_id'          => $request->tax_id,
-                'note'                     => $request->note ?? '',
-                'company_id'               => $user->company_id,
-                'branch_id'                => $user->branch_id,
-                'created_by'               => $user->id,
+                'document_tax_id' => $request->tax_id,
+                'document_tax_amount' => $taxAmount,
+                'note' => $request->note ?? '',
+                'company_id' => $companyId,
+                'branch_id' => $branchId,
+                'created_by' => $user->id,
+                // *** CHANGE: ADDED PAYMENT METHOD ID TO THE CREATE ARRAY ***
+                'payment_method_id' => $request->payment_method_id,
             ]);
 
-            foreach ($request->items as $item) {
+            // Add credit note items
+            foreach ($request->items as $itemData) {
                 BillingCreditNoteItem::create([
-                    'document_id'        => $creditNote->id,
-                    'item_id'            => $item['item_id'],
-                    'quantity'           => $item['quantity'],
-                    'selling_unit_price' => $item['unit_price'],
-                    'tax_id'             => $item['tax_id'] ?? null,
-                    'discount_rate'      => $item['discount_percent'] ?? 0,
-                    'subtotal'           => $item['total_price'],
-                    'company_id'         => $user->company_id,
-                    'branch_id'          => $user->branch_id,
+                    'document_id' => $creditNote->id,
+                    'item_id' => $itemData['item_id'],
+                    'description' => $itemData['description'] ?? '',
+                    'quantity' => $itemData['quantity'],
+                    'selling_unit_price' => $itemData['unit_price'],
+                    'tax_id' => $itemData['tax_id'] ?? null,
+                    'discount_rate' => $itemData['discount_percent'] ?? 0,
+                    'subtotal' => $itemData['total_price'],
+                    'company_id' => $companyId,
+                    'branch_id' => $branchId,
                 ]);
             }
 
@@ -324,6 +357,7 @@ class CreditNoteController extends Controller
         }
     }
 
+
     /**
      * Display the specified credit note.
      *
@@ -332,7 +366,6 @@ class CreditNoteController extends Controller
      */
     public function show($id)
     {
-        // *** CHANGE: Added 'tax' to the with() clause to eager-load the tax relationship ***
         $creditNote = BillingCreditNote::with(['items.item', 'items.tax', 'tax', 'invoice', 'createdBy', 'company', 'branch'])
             ->findOrFail($id);
 
@@ -374,7 +407,7 @@ class CreditNoteController extends Controller
      * @param int $id
      * @return \Illuminate\View\View
      */
-     public function edit($id)
+    public function edit($id)
     {
         $creditNote = BillingCreditNote::findOrFail($id);
         $user = auth()->user();
@@ -385,6 +418,20 @@ class CreditNoteController extends Controller
         $invoices = BillingInvoice::with('customer')->get();
         $creditNoteNumber = $creditNote->document_prefix . '-' . $creditNote->document_number;
 
+        // *** CHANGE: START - Fetch ONLY the user's personalized payment options ***
+        $personalizedPaymentSettings = BillingSettingPersionalisedPaymentOption::where('user_id', $user->id)
+            ->where('company_id', $user->company_id)
+            ->where('branch_id', $user->branch_id)
+            ->first();
+
+        $personalizedPaymentOptions = collect(); // Start with an empty collection
+
+        if ($personalizedPaymentSettings && !empty($personalizedPaymentSettings->payment_options_id)) {
+            // Get only the payment options whose IDs are in the saved JSON array
+            $personalizedPaymentOptions = PaymentOption::whereIn('id', $personalizedPaymentSettings->payment_options_id)->get();
+        }
+        // *** CHANGE: END ***
+
         return view('billing::credit-notes.edit', compact(
             'creditNote',
             'company',
@@ -392,7 +439,8 @@ class CreditNoteController extends Controller
             'items',
             'taxes',
             'invoices',
-            'creditNoteNumber'
+            'creditNoteNumber',
+            'personalizedPaymentOptions' // <-- CHANGE: Pass the new variable to the view
         ));
     }
 
@@ -420,97 +468,109 @@ class CreditNoteController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'tax_id' => 'nullable|exists:taxes,id',
+            // *** CHANGE: ADDED VALIDATION FOR PAYMENT METHOD ID ***
+            'payment_method_id' => 'nullable|exists:payment_options,id',
         ]);
 
         DB::beginTransaction();
         try {
             $creditNote = BillingCreditNote::findOrFail($id);
+            $user = auth()->user();
 
-            // Get customer_id from associated invoice if available, otherwise set to null
+            // Determine company and branch
+            $companyId = $user->company_id ?? $creditNote->company_id;
+            $branchId = $user->branch_id ?? $creditNote->branch_id;
+
+            // Get customer from invoice if provided
             $customerId = null;
             if ($request->invoice_id) {
                 $invoice = BillingInvoice::find($request->invoice_id);
                 if ($invoice) {
                     $customerId = $invoice->customer_id;
+                    $companyId = $invoice->company_id ?? $companyId;
+                    $branchId = $invoice->branch_id ?? $branchId;
                 }
             }
 
-            // Calculate subtotal from all items (existing and new)
+            // Combine existing and new items for subtotal calculation
             $allItems = [];
-            
-            // Add existing items
             if ($request->has('existing_items')) {
-                foreach ($request->existing_items as $itemData) {
-                    $allItems[] = $itemData;
-                }
+                $allItems = array_merge($allItems, $request->existing_items);
             }
-            
-            // Add new items
             if ($request->has('items')) {
-                foreach ($request->items as $itemData) {
-                    $allItems[] = $itemData;
-                }
+                $allItems = array_merge($allItems, $request->items);
             }
-            
+
             $subTotal = $this->calculateSubtotal($allItems);
 
-            // Calculate discount amount
+            // Calculate discount
             $discountAmount = 0;
             if ($request->document_discount_type == 1) { // Percentage
                 $discountAmount = ($subTotal * $request->document_discount_rate) / 100;
-            } else { // Fixed amount
-                $discountAmount = $request->document_discount_amount;
+            } else {
+                $discountAmount = $request->document_discount_amount ?? 0;
             }
 
-            // Calculate tax amount
+            // Calculate tax
             $taxAmount = $this->calculateTaxAmount($subTotal, $discountAmount, $request->tax_id);
 
-            $creditNote->invoice_id               = $request->invoice_id;
-            $creditNote->customer_id              = $customerId;
-            $creditNote->issue_date               = $request->issue_date;
-            $creditNote->due_date                 = $request->due_date;
-            $creditNote->sub_total                = $subTotal;
-            $creditNote->document_discount_type   = $request->document_discount_type;
-            $creditNote->document_discount_rate   = $request->document_discount_rate;
+            // Update credit note
+            $creditNote->invoice_id = $request->invoice_id;
+            $creditNote->customer_id = $customerId;
+            $creditNote->issue_date = $request->issue_date;
+            $creditNote->due_date = $request->due_date;
+            $creditNote->sub_total = $subTotal;
+            $creditNote->document_discount_type = $request->document_discount_type;
+            $creditNote->document_discount_rate = $request->document_discount_rate;
             $creditNote->document_discount_amount = $discountAmount;
-            $creditNote->document_tax_id          = $request->tax_id;
-            $creditNote->note                     = $request->note ?? '';
-            $creditNote->updated_by               = auth()->user()->id;
+            $creditNote->document_tax_id = $request->tax_id;
+            $creditNote->document_tax_amount = $taxAmount;
+            $creditNote->note = $request->note ?? '';
+            $creditNote->company_id = $companyId;
+            $creditNote->branch_id = $branchId;
+            $creditNote->updated_by = $user->id;
+            // *** CHANGE: ADDED PAYMENT METHOD ID TO THE UPDATE ARRAY ***
+            $creditNote->payment_method_id = $request->payment_method_id;
             $creditNote->save();
 
+            // Update existing items
             $existingItemIds = [];
             if ($request->has('existing_items')) {
                 foreach ($request->existing_items as $itemData) {
                     $creditNoteItem = BillingCreditNoteItem::find($itemData['id']);
                     if ($creditNoteItem) {
-                        $creditNoteItem->item_id            = $itemData['item_id'];
-                        $creditNoteItem->quantity           = $itemData['quantity'];
+                        $creditNoteItem->item_id = $itemData['item_id'];
+                        $creditNoteItem->quantity = $itemData['quantity'];
                         $creditNoteItem->selling_unit_price = $itemData['unit_price'];
-                        $creditNoteItem->tax_id             = $itemData['tax_id'] ?? null;
-                        $creditNoteItem->discount_rate      = $itemData['discount_percent'] ?? 0;
-                        $creditNoteItem->subtotal           = $itemData['total_price'];
+                        $creditNoteItem->tax_id = $itemData['tax_id'] ?? null;
+                        $creditNoteItem->discount_rate = $itemData['discount_percent'] ?? 0;
+                        $creditNoteItem->subtotal = $itemData['total_price'];
+                        $creditNoteItem->company_id = $companyId;
+                        $creditNoteItem->branch_id = $branchId;
                         $creditNoteItem->save();
                         $existingItemIds[] = $creditNoteItem->id;
                     }
                 }
             }
 
+            // Delete removed items
             $creditNote->items()->whereNotIn('id', $existingItemIds)->delete();
 
+            // Add new items
             if ($request->has('items')) {
                 foreach ($request->items as $itemData) {
                     if (!empty($itemData['item_id'])) {
                         BillingCreditNoteItem::create([
-                            'document_id'        => $creditNote->id,
-                            'item_id'            => $itemData['item_id'],
-                            'description'        => $itemData['description'] ?? '',
-                            'quantity'           => $itemData['quantity'],
+                            'document_id' => $creditNote->id,
+                            'item_id' => $itemData['item_id'],
+                            'description' => $itemData['description'] ?? '',
+                            'quantity' => $itemData['quantity'],
                             'selling_unit_price' => $itemData['unit_price'],
-                            'tax_id'             => $itemData['tax_id'] ?? null,
-                            'discount_rate'      => $itemData['discount_percent'] ?? 0,
-                            'subtotal'           => $itemData['total_price'],
-                            'company_id'         => auth()->user()->company_id,
-                            'branch_id'          => auth()->user()->branch_id,
+                            'tax_id' => $itemData['tax_id'] ?? null,
+                            'discount_rate' => $itemData['discount_percent'] ?? 0,
+                            'subtotal' => $itemData['total_price'],
+                            'company_id' => $companyId,
+                            'branch_id' => $branchId,
                         ]);
                     }
                 }
@@ -524,6 +584,7 @@ class CreditNoteController extends Controller
             return Reply::error('Error updating credit note: ' . $e->getMessage(), 500);
         }
     }
+
 
     /**
      * Remove the specified credit note from storage.

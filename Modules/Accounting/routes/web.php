@@ -7,6 +7,7 @@ use Modules\Accounting\App\Http\Controllers\PrefixController;
 use Modules\Accounting\App\Http\Controllers\Journal\JournalEntriesController;
 use Modules\Accounting\App\Http\Controllers\Ledger\LedgerController;
 use Modules\Accounting\Http\Controllers\TrialBalance\TrialBalanceController;
+use Modules\Accounting\App\Http\Controllers\CustomerLedger\CustomerLedgerController;
 
 
 
@@ -53,9 +54,29 @@ Route::prefix('accounting')->group(function () {
 });
 Route::get('accounting/ledger/entries-list', [LedgerController::class, 'entriesList'])->name('accounting.ledger.entriesList');
 // Route::get('/accounting/ledger/{id}/view', [LedgerController::class, 'showLedgerDetails'])->name('accounting.ledger.view');
-Route::get('/accounting/ledger/{id}/view', [LedgerController::class, 'details'])->name('accounting.ledger.view');
+// Route::get('/accounting/ledger/{id}/view', [LedgerController::class, 'details'])->name('accounting.ledger.view');
 Route::get('/accounting/trial-balance', [TrialBalanceController::class, 'index'])->name('accounting.trial-balance.index');
 Route::get('/accounting/trial-balance/export-pdf', [TrialBalanceController::class, 'exportPdf'])->name('accounting.trial-balance.export-pdf');
-
+// Route::get('/accounting/ledger/customer/{id}', [LedgerController::class, 'customerDetails'])->name('accounting.ledger.customerDetails');
 // Route::get('accounting/journal/create', [JournalEntriesController::class, 'create'])->name('accounting.journal.create');
 Route::post('/journal', [JournalEntriesController::class, 'store'])->name('accoutnig.journal.store');
+
+ Route::get('/accounting/ledger/{id}/view', [LedgerController::class, 'details'])->name('accounting.ledger.details');
+ Route::get('/accounting/ledger/customer/{id}', [LedgerController::class, 'customerDetails'])->name('accounting.ledger.customerDetails');
+
+
+ // Customer Ledger Routes
+Route::prefix('accounting/customer-ledger')->name('accounting.customer-ledger.')->group(function () {
+    Route::get('/', [CustomerLedgerController::class, 'index'])->name('index');
+    Route::get('/entriesList', [CustomerLedgerController::class, 'entriesList'])->name('entriesList');
+    Route::get('/{id}/view', [CustomerLedgerController::class, 'details'])->name('details');
+    Route::get('/create', [CustomerLedgerController::class, 'create'])->name('create');
+    Route::post('/', [CustomerLedgerController::class, 'store'])->name('store');
+    Route::get('/{id}', [CustomerLedgerController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [CustomerLedgerController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [CustomerLedgerController::class, 'update'])->name('update');
+    Route::delete('/{id}', [CustomerLedgerController::class, 'destroy'])->name('destroy');
+        Route::get('/invoice-preview/{id}', [CustomerLedgerController::class, 'invoicePreview'])->name('invoice.preview');
+    Route::get('/debit-note-preview/{id}', [CustomerLedgerController::class, 'debitNotePreview'])->name('debit-note.preview');
+    Route::get('/credit-note-preview/{id}', [CustomerLedgerController::class, 'creditNotePreview'])->name('credit-note.preview');
+});

@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\laravel_example\UserManagement;
+use App\Http\Controllers\entities\UserManagement;
 use App\Http\Controllers\dashboard\Analytics;
 use App\Http\Controllers\dashboard\Crm;
 use App\Http\Controllers\language\LanguageController;
@@ -161,7 +161,8 @@ use App\Http\Controllers\charts\ChartJs;
 use App\Http\Controllers\maps\Leaflet;
 use Modules\Accounting\Http\Controllers\AccountingController;
 use App\Http\Controllers\module_menu\ModuleMenuController;
-
+use App\Http\Controllers\entities\CompanyManagement;
+use App\Http\Controllers\entities\BranchManagement;
 
 // Main Page Route
 Route::group(['middleware' => 'auth:sanctum', 'verified'], function () {
@@ -377,7 +378,7 @@ Route::get('/charts/chartjs', [ChartJs::class, 'index'])->name('charts-chartjs')
 Route::get('/maps/leaflet', [Leaflet::class, 'index'])->name('maps-leaflet');
 
 // laravel example
-Route::get('/laravel/user-management', [UserManagement::class, 'UserManagement'])->name('laravel-example-user-management');
+Route::get('/entities/user-management', [UserManagement::class, 'UserManagement'])->name('laravel-example-user-management');
 Route::resource('/user-list', UserManagement::class);
 Route::middleware([
   'auth:sanctum',
@@ -391,5 +392,17 @@ Route::middleware([
 
 Route::get('/module-menus', [ModuleMenuController::class, 'index'])->name('module.menus');
 
+// Company Management Routes
+Route::get('entities/company-management', [CompanyManagement::class, 'CompanyManagement'])->name('company.management');
+Route::get('/company-list', [CompanyManagement::class, 'index'])->name('company.list');
+Route::post('/company-store', [CompanyManagement::class, 'store'])->name('company.store');
+Route::get('/company-edit/{id}', [CompanyManagement::class, 'edit'])->name('company.edit');
+Route::delete('/company-delete/{id}', [CompanyManagement::class, 'destroy'])->name('company.delete');
 
+// Branch Management Routes
+Route::get('entities/branch-management', [BranchManagement::class, 'BranchManagement'])->name('branch.management');
+Route::get('/branch-list', [BranchManagement::class, 'index'])->name('branch.list');
+Route::post('/branch-store', [BranchManagement::class, 'store'])->name('branch.store');
+Route::get('/branch-edit/{id}', [BranchManagement::class, 'edit'])->name('branch.edit');
+Route::delete('/branch-delete/{id}', [BranchManagement::class, 'destroy'])->name('branch.delete');
 

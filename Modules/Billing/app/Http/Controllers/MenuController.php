@@ -26,9 +26,9 @@ class MenuController extends Controller
                             'permissions' => 'billing.settings.view',
                             'submenu' => [
                                 [
-                                    'name' => 'Invoice Numbering',
-                                    'slug' => 'billing.settings.invoice-numbering',
-                                    'url'  => 'samplemodule/sample-page-1',
+                                    'name' => 'Payment Options',
+                                    'slug' => 'billing.payment-options.index',
+                                    'url'  => '/payment-options',
                                     'permissions' => 'billing.settings.invoice-numbering.view'
                                 ]
                             ]

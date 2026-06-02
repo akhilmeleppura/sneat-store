@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Modules\Accounting\Events\EntryCreated;
 use Modules\Accounting\App\Helpers\SinglePointAccess\journalEntryAccess;
+use App\Models\Customers\Customer;
 
 class JournalEntriesController extends Controller
 {
@@ -35,11 +36,20 @@ class JournalEntriesController extends Controller
      */
     public function create()
     {
+        $chartOfAccounts = ChartOfAccount::orderBy('account_name')->get();
+        $customers = Customer::orderBy('name')->get(); // Assumes a 'name' attribute on the Customer model
+
+        // Combine data for the select box with optgroups
+        $accountOptions = [
+            'Chart of Accounts' => $chartOfAccounts,
+            'Customers' => $customers
+        ];
+
         return view('accounting::journal.form', [
-            'chartOfAccounts' => ChartOfAccount::all(),
-            'journalEntry' => null, // No entry yet
+            'accountOptions' => $accountOptions, // Pass combined data
+            'journalEntry' => null,
             'isEdit' => false,
-            'today' => Carbon::now()->toDateString(), // Used for default transaction date
+            'today' => now()->format('Y-m-d'),
         ]);
     }
 
@@ -55,7 +65,8 @@ class JournalEntriesController extends Controller
             'transaction_date' => 'required|date',
             'summary' => 'nullable|string|max:255',
             'entries' => 'required|array|min:2',
-            'entries.*.ledger_account_id' => 'required|exists:accounting_chartofaccounts,id',
+            // Updated to handle both ChartOfAccount and Customer IDs
+            'entries.*.ledger_account_id' => 'required|numeric',
             'entries.*.debit_amount' => 'nullable|numeric',
             'entries.*.credit_amount' => 'nullable|numeric',
             'entries.*.description' => 'nullable|string',
@@ -64,12 +75,11 @@ class JournalEntriesController extends Controller
         $totalDebit = collect($request->entries)->sum(fn($entry) => floatval($entry['debit_amount'] ?? 0));
         $totalCredit = collect($request->entries)->sum(fn($entry) => floatval($entry['credit_amount'] ?? 0));
 
-        if ($totalDebit != $totalCredit) {
-            return back()->withErrors(['Total Debit and Credit amounts must be equal.'])->withInput();
+        if (round($totalDebit, 2) != round($totalCredit, 2)) {
+            return back()->withErrors(['mismatch' => 'Total Debit and Credit amounts must be equal.'])->withInput();
         }
 
         DB::beginTransaction();
-
         try {
             $journal = new JournalIndex();
             $journal->transaction_date = $request->transaction_date;
@@ -78,21 +88,51 @@ class JournalEntriesController extends Controller
             $journal->summary = $request->summary;
             $journal->save();
 
-            foreach ($request->entries as $entry) {
-                $journalEntry = addJournalEntry($journal->id, $entry);
+            foreach ($request->entries as $entryData) {
+                 // You might need a way to differentiate between account types if required
+                $entry = $journal->entries()->create([
+                    'chart_of_account_id' => $entryData['ledger_account_id'],
+                    'debit_amount' => $entryData['debit_amount'] ?? 0,
+                    'credit_amount' => $entryData['credit_amount'] ?? 0,
+                    'description' => $entryData['description'],
+                ]);
 
-                // Trigger event to update cumulative balance
-                EntryCreated::dispatch($journalEntry);
+                EntryCreated::dispatch($entry);
             }
 
             DB::commit();
 
-            return redirect()->route('accounting.journal.index')
-                ->with('success', 'Journal Entry Created Successfully.');
+            return redirect()->route('accounting.journal.index')->with('success', 'Journal Entry Created Successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['An error occurred while saving.'])->withInput();
+            return back()->withErrors(['error' => 'An error occurred while saving: ' . $e->getMessage()])->withInput();
         }
+    }
+
+    /**
+     * Show the form for editing the specified journal entry.
+     *
+     * @param  int  $id
+     * @return \Illuminate\View\View
+     */
+    public function edit($id)
+    {
+        $journalEntry = JournalIndex::with('entries')->findOrFail($id);
+        $chartOfAccounts = ChartOfAccount::orderBy('account_name')->get();
+        $customers = Customer::orderBy('name')->get();
+
+        // Combine data for the select box with optgroups
+        $accountOptions = [
+            'Chart of Accounts' => $chartOfAccounts,
+            'Customers' => $customers
+        ];
+
+        return view('accounting::journal.form', [
+            'accountOptions' => $accountOptions, // Pass combined data
+            'journalEntry' => $journalEntry,
+            'isEdit' => true,
+            'today' => null,
+        ]);
     }
 
     /**
@@ -108,7 +148,7 @@ class JournalEntriesController extends Controller
             'transaction_date' => 'required|date',
             'summary' => 'nullable|string|max:255',
             'entries' => 'required|array|min:2',
-            'entries.*.ledger_account_id' => 'required|exists:accounting_chartofaccounts,id',
+            'entries.*.ledger_account_id' => 'required|numeric',
             'entries.*.debit_amount' => 'nullable|numeric',
             'entries.*.credit_amount' => 'nullable|numeric',
             'entries.*.description' => 'nullable|string',
@@ -122,7 +162,7 @@ class JournalEntriesController extends Controller
             $journal->summary = $request->summary;
             $journal->save();
 
-            $journal->entries()->delete();
+            $journal->entries()->delete(); // Clear old entries
 
             foreach ($entries as $entry) {
                 $journal->entries()->create([
@@ -136,25 +176,6 @@ class JournalEntriesController extends Controller
 
         return redirect()->route('accounting.journal.index')->with('success', 'Journal Entry updated successfully.');
     }
-
-    /**
-     * Show the form for editing the specified journal entry.
-     *
-     * @param  int  $id
-     * @return \Illuminate\View\View
-     */
-    public function edit($id)
-    {
-        $journalEntry = JournalIndex::with('entries')->findOrFail($id);
-        $chartOfAccounts = ChartOfAccount::all();
-        return view('accounting::journal.form', [
-            'chartOfAccounts' => $chartOfAccounts,
-            'journalEntry' => $journalEntry,
-            'isEdit' => true,
-            'today' => null, // Don't auto-fill date in edit
-        ]);
-    }
-
     /**
      * Display the specified journal entry.
      *

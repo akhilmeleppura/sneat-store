@@ -1,11 +1,11 @@
 @extends('accounting::components.layouts.master')
 
-@section('title', 'Ledger Entries')
+@section('title', 'Customer Ledger')
 
 @section('content')
     <div class="card">
         <div class="card-header border-bottom">
-            <h5 class="card-title mb-0">Ledger Entries</h5>
+            <h5 class="card-title mb-0">Customer Ledger</h5>
         </div>
         <div class="card-datatable">
             <table class="datatables-users table border-top">
@@ -22,27 +22,39 @@
 
     <script>
         window.dataTableConfig = {
-            ajaxUrl: "{{ route('accounting.ledger.entriesList') }}",
-            actionsRoutePrefix: '/accounting/ledger',
-            hideAddButton: true, // This will hide the Add Ledger button
+            ajaxUrl: "{{ route('accounting.customer-ledger.entriesList') }}",
+            actionsRoutePrefix: '/accounting/customer-ledger',
+            hideAddButton: true, // This will hide the Add Customer button
             columns: {
                 id: {
                     type: 'text',
                     title: 'ID'
                 },
-                account_name: {
+                name: {
                     type: 'link',
-                    linkTo: '/accounting/ledger', // This is base URL
+                    linkTo: '/accounting/customer-ledger', // This is base URL
                     linkSuffix: '/view', // Suffix to append after ID
-                    title: 'Account Name'
+                    title: 'Name'
                 },
-                sub_category: {
+                email: {
                     type: 'text',
-                    title: 'Sub Category'
+                    title: 'Email'
                 },
-                main_category: {
+                phone: {
                     type: 'text',
-                    title: 'Main Category'
+                    title: 'Phone'
+                },
+                address: {
+                    type: 'text',
+                    title: 'Address'
+                },
+                balance: {
+                    type: 'text',
+                    title: 'Balance'
+                },
+                created_at: {
+                    type: 'text',
+                    title: 'Created Date'
                 }
             },
             permissions: {

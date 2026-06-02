@@ -7,11 +7,13 @@ use Illuminate\Http\Request;
 use Modules\Billing\App\Models\BillingDebitNote;
 use Modules\Billing\App\Models\BillingDebitNoteItem;
 use Modules\Billing\App\Models\BillingInvoice;
+use Modules\Billing\App\Models\BillingSettingPersionalisedPaymentOption;
 use App\Models\Customers\Customer;
 use Modules\General\App\Models\Company;
 use Modules\General\App\Models\Branch;
 use Modules\Billing\App\Models\BillingItem;
 use App\Models\Taxes\Tax;
+use App\Models\Payments\PaymentOption;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\HS\Reply;
@@ -20,7 +22,7 @@ use Modules\General\App\Models\Template;
 
 /**
  * DebitNoteController - Handles all debit note related operations
- * 
+ *
  * This controller manages the CRUD operations for debit notes, including
  * displaying debit note lists, creating, editing, updating, and deleting debit notes.
  */
@@ -138,6 +140,20 @@ class DebitNoteController extends Controller
         $invoices = BillingInvoice::with('customer')->limit(100)->get();
         $nextDebitNoteNumber = $this->getNextDebitNoteNumber();
 
+        // *** CHANGE: START - Fetch ONLY the user's personalized payment options ***
+        $personalizedPaymentSettings = BillingSettingPersionalisedPaymentOption::where('user_id', $user->id)
+            ->where('company_id', $user->company_id)
+            ->where('branch_id', $user->branch_id)
+            ->first();
+
+        $personalizedPaymentOptions = collect(); // Start with an empty collection
+
+        if ($personalizedPaymentSettings && !empty($personalizedPaymentSettings->payment_options_id)) {
+            // Get only the payment options whose IDs are in the saved JSON array
+            $personalizedPaymentOptions = PaymentOption::whereIn('id', $personalizedPaymentSettings->payment_options_id)->get();
+        }
+        // *** CHANGE: END ***
+
         return view('billing::debit-notes.create', compact(
             'debitNote',
             'company',
@@ -146,7 +162,8 @@ class DebitNoteController extends Controller
             'taxes',
             'nextDebitNoteNumber',
             'invoices',
-            'invoice'
+            'invoice',
+            'personalizedPaymentOptions' // <-- CHANGE: Pass the new variable to the view
         ));
     }
 
@@ -235,11 +252,14 @@ class DebitNoteController extends Controller
             'invoice_id'           => 'nullable|exists:billing_invoices,id',
             'issue_date'           => 'required|date',
             'due_date'             => 'required|date|after_or_equal:issue_date',
-            'items'                => 'required|array',
+            'items'                => 'required|array|min:1',
             'items.*.item_id'      => 'required|exists:billing_items,id',
             'items.*.quantity'     => 'required|numeric|min:0.01',
             'items.*.unit_price'   => 'required|numeric|min:0',
+            'items.*.total_price'  => 'required|numeric|min:0',
             'tax_id'               => 'nullable|exists:taxes,id',
+            // *** CHANGE: ADDED VALIDATION FOR PAYMENT METHOD ID ***
+            'payment_method_id'    => 'nullable|exists:payment_options,id',
         ]);
 
         DB::beginTransaction();
@@ -247,25 +267,27 @@ class DebitNoteController extends Controller
             $user = auth()->user();
             [$prefix, $number] = $this->parseDocumentNumber($request->debit_note_number);
             $subTotal = $this->calculateSubtotal($request->items);
-
-            // Get customer_id from associated invoice if available, otherwise set to null
+            
+            $companyId = $user->company_id ?? Company::first()->id;
+            $branchId  = $user->branch_id ?? Branch::first()->id;
+            
             $customerId = null;
             if ($request->invoice_id) {
                 $invoice = BillingInvoice::find($request->invoice_id);
                 if ($invoice) {
                     $customerId = $invoice->customer_id;
+                    $companyId  = $invoice->company_id ?? $companyId;
+                    $branchId   = $invoice->branch_id ?? $branchId;
                 }
             }
-
-            // Calculate discount amount
+            
             $discountAmount = 0;
             if ($request->document_discount_type == 1) { // Percentage
                 $discountAmount = ($subTotal * $request->document_discount_rate) / 100;
             } else { // Fixed amount
-                $discountAmount = $request->document_discount_amount;
+                $discountAmount = $request->document_discount_amount ?? 0;
             }
 
-            // Calculate tax amount
             $taxAmount = $this->calculateTaxAmount($subTotal, $discountAmount, $request->tax_id);
 
             $debitNote = BillingDebitNote::create([
@@ -280,23 +302,27 @@ class DebitNoteController extends Controller
                 'document_discount_rate'   => $request->document_discount_rate,
                 'document_discount_amount' => $discountAmount,
                 'document_tax_id'          => $request->tax_id,
+                'document_tax_amount'      => $taxAmount,
                 'note'                     => $request->note ?? '',
-                'company_id'               => $user->company_id,
-                'branch_id'                => $user->branch_id,
+                'company_id'               => $companyId,
+                'branch_id'                => $branchId,
                 'created_by'               => $user->id,
+                // *** CHANGE: ADDED PAYMENT METHOD ID TO THE CREATE ARRAY ***
+                'payment_method_id'        => $request->payment_method_id,
             ]);
 
             foreach ($request->items as $item) {
                 BillingDebitNoteItem::create([
                     'document_id'        => $debitNote->id,
                     'item_id'            => $item['item_id'],
+                    'description'        => $item['description'] ?? '',
                     'quantity'           => $item['quantity'],
                     'selling_unit_price' => $item['unit_price'],
                     'tax_id'             => $item['tax_id'] ?? null,
                     'discount_rate'      => $item['discount_percent'] ?? 0,
                     'subtotal'           => $item['total_price'],
-                    'company_id'         => $user->company_id,
-                    'branch_id'          => $user->branch_id,
+                    'company_id'         => $companyId,
+                    'branch_id'          => $branchId,
                 ]);
             }
 
@@ -317,11 +343,9 @@ class DebitNoteController extends Controller
      */
     public function show($id)
     {
-        // *** CHANGE: Added 'tax' to the with() clause to eager-load the tax relationship ***
         $debitNote = BillingDebitNote::with(['items.item', 'items.tax', 'tax', 'invoice', 'createdBy', 'company', 'branch'])
             ->findOrFail($id);
 
-        // Get branch logo
         $branchLogo = null;
         if ($debitNote->branch) {
             $extensions = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'];
@@ -336,13 +360,11 @@ class DebitNoteController extends Controller
 
         $branchId = $debitNote->items->first()?->branch_id;
 
-        // Fetch the template directly from DocumentTemplate
         $template = DocumentTemplate::where('company_id', auth()->user()->company_id)
             ->where('branch_id', $branchId)
             ->where('type', 'invoice')
             ->first();
 
-        // Use the path from the fetched template, fallback to default
         $templateView = Template::find($template?->template_id)?->path ?? 'HS.Templates.standard_header_footer';
 
         return view('billing::debit-notes.show', compact(
@@ -370,6 +392,20 @@ class DebitNoteController extends Controller
         $invoices = BillingInvoice::with('customer')->limit(100)->get();
         $debitNoteNumber = $debitNote->document_prefix . '-' . $debitNote->document_number;
 
+        // *** CHANGE: START - Fetch ONLY the user's personalized payment options ***
+        $personalizedPaymentSettings = BillingSettingPersionalisedPaymentOption::where('user_id', $user->id)
+            ->where('company_id', $user->company_id)
+            ->where('branch_id', $user->branch_id)
+            ->first();
+
+        $personalizedPaymentOptions = collect(); // Start with an empty collection
+
+        if ($personalizedPaymentSettings && !empty($personalizedPaymentSettings->payment_options_id)) {
+            // Get only the payment options whose IDs are in the saved JSON array
+            $personalizedPaymentOptions = PaymentOption::whereIn('id', $personalizedPaymentSettings->payment_options_id)->get();
+        }
+        // *** CHANGE: END ***
+
         return view('billing::debit-notes.edit', compact(
             'debitNote',
             'company',
@@ -377,7 +413,8 @@ class DebitNoteController extends Controller
             'items',
             'taxes',
             'debitNoteNumber',
-            'invoices'
+            'invoices',
+            'personalizedPaymentOptions' // <-- CHANGE: Pass the new variable to the view
         ));
     }
 
@@ -398,82 +435,85 @@ class DebitNoteController extends Controller
             'existing_items.*.id'        => 'required|exists:billing_debit_note_items,id',
             'existing_items.*.item_id'   => 'required|exists:billing_items,id',
             'existing_items.*.quantity'  => 'required|numeric|min:0.01',
-            'existing_items.*.unit_price' => 'required|numeric|min:0',
+            'existing_items.*.unit_price'=> 'required|numeric|min:0',
+            'existing_items.*.total_price'=> 'required|numeric|min:0',
             'items'                      => 'sometimes|array',
             'items.*.item_id'            => 'required|exists:billing_items,id',
             'items.*.quantity'           => 'required|numeric|min:0.01',
             'items.*.unit_price'         => 'required|numeric|min:0',
+            'items.*.total_price'        => 'required|numeric|min:0',
             'tax_id'                     => 'nullable|exists:taxes,id',
+            // *** CHANGE: ADDED VALIDATION FOR PAYMENT METHOD ID ***
+            'payment_method_id'          => 'nullable|exists:payment_options,id',
         ]);
 
         DB::beginTransaction();
         try {
+            $user = auth()->user();
             $debitNote = BillingDebitNote::findOrFail($id);
 
-            // Get customer_id from associated invoice if available, otherwise set to null
+            $companyId = $user->company_id ?? Company::first()->id;
+            $branchId  = $user->branch_id ?? Branch::first()->id;
+
             $customerId = null;
             if ($request->invoice_id) {
                 $invoice = BillingInvoice::find($request->invoice_id);
                 if ($invoice) {
                     $customerId = $invoice->customer_id;
+                    $companyId  = $invoice->company_id ?? $companyId;
+                    $branchId   = $invoice->branch_id ?? $branchId;
                 }
             }
-
-            // Calculate subtotal from all items (existing and new)
+            
             $allItems = [];
-
-            // Add existing items
-            if ($request->has('existing_items')) {
-                foreach ($request->existing_items as $itemData) {
-                    $allItems[] = $itemData;
-                }
-            }
-
-            // Add new items
-            if ($request->has('items')) {
-                foreach ($request->items as $itemData) {
-                    $allItems[] = $itemData;
-                }
-            }
+            if ($request->has('existing_items')) $allItems = array_merge($allItems, $request->existing_items);
+            if ($request->has('items')) $allItems = array_merge($allItems, $request->items);
 
             $subTotal = $this->calculateSubtotal($allItems);
-
-            // Calculate discount amount
+            
             $discountAmount = 0;
-            if ($request->document_discount_type == 1) { // Percentage
+            if ($request->document_discount_type == 1) {
                 $discountAmount = ($subTotal * $request->document_discount_rate) / 100;
-            } else { // Fixed amount
-                $discountAmount = $request->document_discount_amount;
+            } else {
+                $discountAmount = $request->document_discount_amount ?? 0;
             }
 
-            // Calculate tax amount
             $taxAmount = $this->calculateTaxAmount($subTotal, $discountAmount, $request->tax_id);
 
-            $debitNote->invoice_id               = $request->invoice_id;
-            $debitNote->customer_id              = $customerId;
-            $debitNote->issue_date               = $request->issue_date;
-            $debitNote->due_date                 = $request->due_date;
-            $debitNote->sub_total                = $subTotal;
-            $debitNote->document_discount_type   = $request->document_discount_type;
-            $debitNote->document_discount_rate   = $request->document_discount_rate;
-            $debitNote->document_discount_amount = $discountAmount;
-            $debitNote->document_tax_id          = $request->tax_id;
-            $debitNote->note                     = $request->note ?? '';
-            $debitNote->updated_by               = auth()->user()->id;
-            $debitNote->save();
+            $debitNote->update([
+                'invoice_id'               => $request->invoice_id,
+                'customer_id'              => $customerId,
+                'issue_date'               => $request->issue_date,
+                'due_date'                 => $request->due_date,
+                'sub_total'                => $subTotal,
+                'document_discount_type'   => $request->document_discount_type,
+                'document_discount_rate'   => $request->document_discount_rate,
+                'document_discount_amount' => $discountAmount,
+                'document_tax_id'          => $request->tax_id,
+                'document_tax_amount'      => $taxAmount,
+                'note'                     => $request->note ?? '',
+                'company_id'               => $companyId,
+                'branch_id'                => $branchId,
+                'updated_by'               => $user->id,
+                // *** CHANGE: ADDED PAYMENT METHOD ID TO THE UPDATE ARRAY ***
+                'payment_method_id'        => $request->payment_method_id,
+            ]);
 
             $existingItemIds = [];
             if ($request->has('existing_items')) {
                 foreach ($request->existing_items as $itemData) {
                     $debitNoteItem = BillingDebitNoteItem::find($itemData['id']);
                     if ($debitNoteItem) {
-                        $debitNoteItem->item_id            = $itemData['item_id'];
-                        $debitNoteItem->quantity           = $itemData['quantity'];
-                        $debitNoteItem->selling_unit_price = $itemData['unit_price'];
-                        $debitNoteItem->tax_id             = $itemData['tax_id'] ?? null;
-                        $debitNoteItem->discount_rate      = $itemData['discount_percent'] ?? 0;
-                        $debitNoteItem->subtotal           = $itemData['total_price'];
-                        $debitNoteItem->save();
+                        $debitNoteItem->update([
+                            'item_id'            => $itemData['item_id'],
+                            'quantity'           => $itemData['quantity'],
+                            'selling_unit_price' => $itemData['unit_price'],
+                            'tax_id'             => $itemData['tax_id'] ?? null,
+                            'discount_rate'      => $itemData['discount_percent'] ?? 0,
+                            'subtotal'           => $itemData['total_price'],
+                            'company_id'         => $companyId,
+                            'branch_id'          => $branchId,
+                        ]);
                         $existingItemIds[] = $debitNoteItem->id;
                     }
                 }
@@ -493,8 +533,8 @@ class DebitNoteController extends Controller
                             'tax_id'             => $itemData['tax_id'] ?? null,
                             'discount_rate'      => $itemData['discount_percent'] ?? 0,
                             'subtotal'           => $itemData['total_price'],
-                            'company_id'         => auth()->user()->company_id,
-                            'branch_id'          => auth()->user()->branch_id,
+                            'company_id'         => $companyId,
+                            'branch_id'          => $branchId,
                         ]);
                     }
                 }
@@ -542,7 +582,6 @@ class DebitNoteController extends Controller
     public function download($id)
     {
         $debitNote = BillingDebitNote::with(['items', 'company', 'branch', 'tax'])->findOrFail($id);
-        // Example: generate PDF
         $pdf = \PDF::loadView('billing.debit-notes.pdf', compact('debitNote'));
         return $pdf->download("DebitNote-{$debitNote->id}.pdf");
     }
@@ -556,7 +595,6 @@ class DebitNoteController extends Controller
     public function print($id)
     {
         $debitNote = BillingDebitNote::with(['items', 'company', 'branch', 'tax'])->findOrFail($id);
-        // You can return a special print view
         return view('billing.debit-notes.print', compact('debitNote'));
     }
 }

@@ -416,6 +416,12 @@
             formData.set('due_date', dueDate);
             formData.set('debit_note_number', document.getElementById('debitNoteId').value);
 
+            // *** ADD THIS: Get the selected payment method ID and append it to the form data ***
+            const paymentMethodId = document.getElementById('acceptPaymentsVia').value;
+            if(paymentMethodId) {
+                formData.append('payment_method_id', paymentMethodId);
+            }
+
             document.querySelectorAll('.repeater-wrapper').forEach((row, index) => {
                 const itemId = row.querySelector('.item-details')?.value;
                 if (itemId) {
@@ -848,13 +854,19 @@
                 </div>
             </div>
             <div>
+                {{-- *** CHANGE: START - Updated Payment Options Dropdown *** --}}
                 <label for="acceptPaymentsVia" class="form-label">Accept payments via</label>
-                <select class="form-select mb-6" id="acceptPaymentsVia">
-                    <option value="Bank Account">Bank Account</option>
-                    <option value="Paypal">Paypal</option>
-                    <option value="Card">Credit/Debit Card</option>
-                    <option value="UPI Transfer">UPI Transfer</option>
+                <select class="form-select mb-6" id="acceptPaymentsVia" name="payment_method_id">
+                    @if(isset($personalizedPaymentOptions) && $personalizedPaymentOptions->isNotEmpty())
+                        @foreach($personalizedPaymentOptions as $option)
+                            <option value="{{ $option->id }}">{{ $option->name }}</option>
+                        @endforeach
+                    @else
+                        <option value="" disabled>No payment options configured</option>
+                    @endif
                 </select>
+                {{-- *** CHANGE: END *** --}}
+                
                 <div class="d-flex justify-content-between mb-2">
                     <label for="payment-terms">Payment Terms</label>
                     <div class="form-check form-switch me-n2">

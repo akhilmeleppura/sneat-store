@@ -17,6 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
+        // ... (all your existing JavaScript code remains the same until the saveInvoice function) ...
         document.addEventListener("DOMContentLoaded", function() {
             // Flatpickr for Issued Date
             const issueDatePicker = flatpickr(".invoice-date", {
@@ -393,6 +394,12 @@
             formData.set('due_date', dueDate);
             formData.set('invoice_number', document.getElementById('invoiceId').value);
 
+            // *** ADD THIS: Get the selected payment method ID and append it to the form data ***
+            const paymentMethodId = document.getElementById('acceptPaymentsVia').value;
+            if(paymentMethodId) {
+                formData.append('payment_method_id', paymentMethodId);
+            }
+
             document.querySelectorAll('.repeater-wrapper').forEach((row, index) => {
                 const itemId = row.querySelector('.item-details')?.value;
                 if (itemId) {
@@ -501,6 +508,7 @@
         $document_prefix = $document_prefix ?? 'INV-';
     @endphp
     <div class="row invoice-add">
+        <!-- Invoice Add-->
         <div class="col-lg-9 col-12 mb-lg-0 mb-6">
             <div class="card invoice-preview-card p-sm-12 p-6">
                 <div class="card-body invoice-preview-header rounded">
@@ -797,6 +805,9 @@
                 </div>
             </div>
         </div>
+        <!-- /Invoice Add-->
+
+        <!-- Invoice Actions -->
         <div class="col-lg-3 col-12 invoice-actions">
             <div class="card mb-6">
                 <div class="card-body">
@@ -813,13 +824,18 @@
                 </div>
             </div>
             <div>
+                {{-- *** CHANGE: ADD name ATTRIBUTE AND ENSURE VARIABLE EXISTS *** --}}
                 <label for="acceptPaymentsVia" class="form-label">Accept payments via</label>
-                <select class="form-select mb-6" id="acceptPaymentsVia">
-                    <option value="Bank Account">Bank Account</option>
-                    <option value="Paypal">Paypal</option>
-                    <option value="Card">Credit/Debit Card</option>
-                    <option value="UPI Transfer">UPI Transfer</option>
+                <select class="form-select mb-6" id="acceptPaymentsVia" name="payment_method_id">
+                    @if(isset($personalizedPaymentOptions) && $personalizedPaymentOptions->isNotEmpty())
+                        @foreach($personalizedPaymentOptions as $option)
+                            <option value="{{ $option->id }}">{{ $option->name }}</option>
+                        @endforeach
+                    @else
+                        <option value="" disabled>No payment options configured</option>
+                    @endif
                 </select>
+
                 <div class="d-flex justify-content-between mb-2">
                     <label for="payment-terms">Payment Terms</label>
                     <div class="form-check form-switch me-n2">
@@ -840,6 +856,7 @@
                 </div>
             </div>
         </div>
+        <!-- /Invoice Actions -->
     </div>
     @include('_partials/_offcanvas/offcanvas-send-invoice')
 @endsection

@@ -5,6 +5,7 @@ use Modules\Billing\App\Http\Controllers\BillingController;
 use Modules\Billing\App\Http\Controllers\Invoices\InvoiceController;
 use Modules\Billing\App\Http\Controllers\CreditNotes\CreditNoteController;
 use Modules\Billing\App\Http\Controllers\DebitNotes\DebitNoteController;
+use Modules\Billing\App\Http\Controllers\PaymentOptions\PaymentOptionController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
   Route::prefix('accounting/billings')->group(function () {
@@ -55,5 +56,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/{id}', [BillingController::class, 'show'])->name('billings.show');
     Route::get('invoices/{id}/edit', [BillingController::class, 'edit'])->name('billings.edit');
     Route::delete('/{id}', [BillingController::class, 'destroy'])->name('billings.destroy');
+
+    // Route::get('/payments', [PaymentOptionController::class, 'index'])->name('billing.payment-options.index');
   });
 });
+    Route::get('/payment-options', [PaymentOptionController::class, 'index'])->name('billing.payment-options.index');
+Route::put('/payment-options', [PaymentOptionController::class, 'update'])->name('payment-options.update');

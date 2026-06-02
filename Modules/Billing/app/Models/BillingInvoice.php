@@ -31,12 +31,15 @@ class BillingInvoice extends Model
         'document_discount_amount',
         'payment_status',
         'document_tax_id',
+        'payment_method_id', // *** ADD THIS LINE ***
     ];
 
     protected $casts = [
         'issue_date' => 'date',
         'due_date' => 'date',
     ];
+
+    // ... (rest of your model code remains the same) ...
 
     /**
      * Get the calculated document discount amount.

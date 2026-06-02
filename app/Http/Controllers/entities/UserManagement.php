@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\laravel_example;
+namespace App\Http\Controllers\entities;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -63,7 +63,7 @@ class UserManagement extends AccountBaseController
             ]
         ];
 
-        return view('content.laravel-example.user-management', [
+        return view('content.entities.user-management', [
             'totalUser' => $userCount,
             'verified' => $verified,
             'notVerified' => $notVerified,

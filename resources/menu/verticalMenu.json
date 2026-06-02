@@ -128,18 +128,30 @@
       ]
     },
     {
-      "name": "Laravel Example",
-      "icon": "menu-icon icon-base bx bxl-php",
+      "name": "Entities",
+      "icon": "menu-icon bx bx-layer",
       "slug": "laravel-example",
       "submenu": [
         {
-          "url": "laravel/user-management",
+          "url": "entities/user-management",
           "name": "User Management",
-          "slug": "laravel-example-user-management"
+          "icon": "bx bx-user-circle",
+          "slug": "entities-user-management"
+        },
+        {
+          "url": "entities/company-management",
+          "name": "Company",
+          "icon": "bx bx-buildings",
+          "slug": "entities-company"
+        },
+        {
+          "url": "entities/branch-management",
+          "name": "Branch",
+          "icon": "bx bx-git-branch",
+          "slug": "entities-branch"
         }
       ]
     },
-   
     {
       "menuHeader": "Apps & Pages"
     },
@@ -1095,7 +1107,6 @@
       "name": "Leaflet Maps",
       "slug": "maps-leaflet"
     },
-    
     {
       "menuHeader": "Permissions"
     },
@@ -1150,6 +1161,5 @@
       "slug": "documentation",
       "target": "_blank"
     }
-    
   ]
 }

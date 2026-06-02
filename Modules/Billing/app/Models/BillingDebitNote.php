@@ -32,7 +32,8 @@ class BillingDebitNote extends Model
         'company_id',
         'branch_id',
         'created_by',
-        'updated_by'
+        'updated_by',
+        'payment_method_id',
     ];
 
     protected $casts = [

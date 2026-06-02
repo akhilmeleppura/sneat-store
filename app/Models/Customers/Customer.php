@@ -5,6 +5,7 @@ namespace App\Models\Customers;
 use Modules\Billing\App\Models\BillingInvoice;
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\Accounting\App\Models\Ledger;
 
 class Customer extends Model
 {
@@ -53,4 +54,10 @@ class Customer extends Model
     {
         return $query->where('status', 'inactive');
     }
+
+    public function ledgerAccounts()
+{
+    return $this->hasMany(Ledger::class, 'customer_id', 'id');
+}
+
 }

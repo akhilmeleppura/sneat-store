@@ -323,6 +323,12 @@
 
             formData.set('credit_note_number', document.getElementById('creditNoteId').value);
 
+            // *** ADD THIS: Get the selected payment method ID and append it to the form data ***
+            const paymentMethodId = document.getElementById('acceptPaymentsVia').value;
+            if(paymentMethodId) {
+                formData.append('payment_method_id', paymentMethodId);
+            }
+
             // Manually structure repeater data
             document.querySelectorAll('.repeater-wrapper').forEach((row, index) => {
                 const itemId = row.querySelector('.item-details')?.value;
@@ -347,6 +353,7 @@
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json'
                     },
                     body: formData
@@ -707,6 +714,41 @@
                         onclick="previewCreditNote()">Preview</button>
                     <button type="button" id="updateCreditNoteBtn" class="btn btn-label-secondary d-grid w-100"
                         onclick="updateCreditNote()">Update</button>
+                </div>
+            </div>
+            <div>
+                {{-- *** CHANGE: START - Updated Payment Options Dropdown *** --}}
+                <label for="acceptPaymentsVia" class="form-label">Accept payments via</label>
+                <select class="form-select mb-6" id="acceptPaymentsVia" name="payment_method_id">
+                    @if(isset($personalizedPaymentOptions) && $personalizedPaymentOptions->isNotEmpty())
+                        @foreach($personalizedPaymentOptions as $option)
+                            <option value="{{ $option->id }}" {{ $creditNote->payment_method_id == $option->id ? 'selected' : '' }}>
+                                {{ $option->name }}
+                            </option>
+                        @endforeach
+                    @else
+                        <option value="" disabled>No payment options configured</option>
+                    @endif
+                </select>
+                {{-- *** CHANGE: END *** --}}
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <label for="payment-terms">Payment Terms</label>
+                    <div class="form-check form-switch me-n2">
+                        <input type="checkbox" class="form-check-input" id="payment-terms" checked />
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <label for="client-notes">Customer Notes</label>
+                    <div class="form-check form-switch me-n2">
+                        <input type="checkbox" class="form-check-input" id="client-notes" checked />
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <label for="payment-stub">Payment Stub</label>
+                    <div class="form-check form-switch me-n2">
+                        <input type="checkbox" class="form-check-input" id="payment-stub" checked />
+                    </div>
                 </div>
             </div>
         </div>

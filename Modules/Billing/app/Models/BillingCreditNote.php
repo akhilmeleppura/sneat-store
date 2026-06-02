@@ -20,6 +20,7 @@ class BillingCreditNote extends Model
         'document_number',
         'customer_id',
         'invoice_id',
+        'payment_method_id',
         'issue_date',
         'due_date',
         'sub_total',
@@ -51,29 +52,29 @@ class BillingCreditNote extends Model
         if (!$this->document_discount_rate || $this->document_discount_rate <= 0) {
             return 0;
         }
-        
+
         // Calculate the document net amount after item-level adjustments
         $itemTotal = 0;
         $itemDiscountTotal = 0;
         $itemTaxTotal = 0;
-        
+
         foreach ($this->items as $item) {
             $itemSubtotal = $item->quantity * $item->selling_unit_price;
             $itemTotal += $itemSubtotal;
-            
+
             $itemDiscountAmount = $itemSubtotal * ($item->discount_rate / 100);
             $itemDiscountTotal += $itemDiscountAmount;
-            
+
             if ($item->tax) {
                 $itemTaxableAmount = $itemSubtotal - $itemDiscountAmount;
                 $itemTaxAmount = ($itemTaxableAmount * $item->tax->percentage) / 100;
                 $itemTaxTotal += $itemTaxAmount;
             }
         }
-        
+
         // Document net amount after item-level adjustments
         $documentNetAmount = $itemTotal - $itemDiscountTotal + $itemTaxTotal;
-        
+
         // Calculate document discount based on the type
         if ($this->document_discount_type == 1) { // Percentage
             return ($documentNetAmount * $this->document_discount_rate) / 100;
@@ -93,42 +94,42 @@ class BillingCreditNote extends Model
         if (!$this->document_tax_id) {
             return 0;
         }
-        
+
         $tax = Tax::find($this->document_tax_id);
         if (!$tax) {
             return 0;
         }
-        
+
         // Calculate the document net amount after item-level adjustments
         $itemTotal = 0;
         $itemDiscountTotal = 0;
         $itemTaxTotal = 0;
-        
+
         foreach ($this->items as $item) {
             $itemSubtotal = $item->quantity * $item->selling_unit_price;
             $itemTotal += $itemSubtotal;
-            
+
             $itemDiscountAmount = $itemSubtotal * ($item->discount_rate / 100);
             $itemDiscountTotal += $itemDiscountAmount;
-            
+
             if ($item->tax) {
                 $itemTaxableAmount = $itemSubtotal - $itemDiscountAmount;
                 $itemTaxAmount = ($itemTaxableAmount * $item->tax->percentage) / 100;
                 $itemTaxTotal += $itemTaxAmount;
             }
         }
-        
+
         // Document net amount after item-level adjustments
         $documentNetAmount = $itemTotal - $itemDiscountTotal + $itemTaxTotal;
-        
+
         // Apply document discount
         $documentDiscountAmount = $this->document_discount_amount;
         $taxableAmount = $documentNetAmount - $documentDiscountAmount;
-        
+
         if ($taxableAmount < 0) {
             $taxableAmount = 0;
         }
-        
+
         // Calculate document tax
         return ($taxableAmount * $tax->percentage) / 100;
     }
@@ -143,21 +144,21 @@ class BillingCreditNote extends Model
         $itemTotal = 0;
         $itemDiscountTotal = 0;
         $itemTaxTotal = 0;
-        
+
         foreach ($this->items as $item) {
             $itemSubtotal = $item->quantity * $item->selling_unit_price;
             $itemTotal += $itemSubtotal;
-            
+
             $itemDiscountAmount = $itemSubtotal * ($item->discount_rate / 100);
             $itemDiscountTotal += $itemDiscountAmount;
-            
+
             if ($item->tax) {
                 $itemTaxableAmount = $itemSubtotal - $itemDiscountAmount;
                 $itemTaxAmount = ($itemTaxableAmount * $item->tax->percentage) / 100;
                 $itemTaxTotal += $itemTaxAmount;
             }
         }
-        
+
         return $itemTotal - $itemDiscountTotal + $itemTaxTotal;
     }
 
@@ -215,7 +216,7 @@ class BillingCreditNote extends Model
     {
         return $this->belongsTo(Company::class, 'company_id');
     }
-    
+
     public function branch()
     {
         return $this->belongsTo(Branch::class, 'branch_id');

@@ -384,6 +384,12 @@
             let formData = new FormData(form);
             formData.append('_method', 'PUT');
 
+            // *** ADD THIS: Get the selected payment method ID and append it to the form data ***
+            const paymentMethodId = document.getElementById('acceptPaymentsVia').value;
+            if(paymentMethodId) {
+                formData.append('payment_method_id', paymentMethodId);
+            }
+
             let issueDate = document.querySelector('.invoice-date').value;
             if (issueDate) {
                 let parts = issueDate.split('/');
@@ -395,7 +401,7 @@
                 let parts = dueDate.split('/');
                 formData.set('due_date', parts[2] + '-' + parts[0] + '-' + parts[1]);
             }
-            
+
             formData.set('invoice_number', document.getElementById('invoiceId').value);
 
             // Clear previous items to avoid duplication before appending new list
@@ -407,9 +413,9 @@
                 if (itemId) {
                     const itemDbId = row.querySelector('input[name*="[id]"]')?.value; // More reliable selector
                     const prefix = itemDbId ? `existing_items[${index}]` : `items[${index}]`;
-                    
+
                     if (itemDbId) formData.append(`${prefix}[id]`, itemDbId);
-                    
+
                     formData.append(`${prefix}[item_id]`, itemId);
                     formData.append(`${prefix}[quantity]`, parseFloat(row.querySelector('.quantity')?.value || 0));
                     formData.append(`${prefix}[unit_price]`, parseFloat(row.querySelector('.selling-unit-price')?.value || 0));
@@ -481,6 +487,7 @@
         $invoiceNumber = $invoice->document_prefix . '-' . $invoice->document_number;
     @endphp
     <div class="row invoice-add">
+        <!-- Invoice Edit-->
         <div class="col-lg-9 col-12 mb-lg-0 mb-6">
             <div class="card invoice-preview-card p-sm-12 p-6">
                 <div class="card-body invoice-preview-header rounded">
@@ -687,6 +694,9 @@
                 <hr class="my-0" />
             </div>
         </div>
+        <!-- /Invoice Edit-->
+
+        <!-- Invoice Actions -->
         <div class="col-lg-3 col-12 invoice-actions">
             <div class="card mb-6">
                 <div class="card-body">
@@ -695,8 +705,24 @@
                     <button type="button" id="saveInvoiceBtn" class="btn btn-label-secondary d-grid w-100" onclick="saveInvoice()">Update</button>
                 </div>
             </div>
-             {{-- Actions Panel --}}
+            <div>
+                {{-- *** CHANGE: ADD DROPDOWN WITH PRE-SELECTED VALUE *** --}}
+                <label for="acceptPaymentsVia" class="form-label">Accept payments via</label>
+                <select class="form-select mb-6" id="acceptPaymentsVia" name="payment_method_id">
+                    @if(isset($personalizedPaymentOptions) && $personalizedPaymentOptions->isNotEmpty())
+                        @foreach($personalizedPaymentOptions as $option)
+                            <option value="{{ $option->id }}" {{ $invoice->payment_method_id == $option->id ? 'selected' : '' }}>
+                                {{ $option->name }}
+                            </option>
+                        @endforeach
+                    @else
+                        <option value="" disabled>No payment options configured</option>
+                    @endif
+                </select>
+                {{-- *** (You can add your other checkboxes for Payment Terms etc. back here if needed) *** --}}
+            </div>
         </div>
+        <!-- /Invoice Actions -->
     </div>
     @include('_partials/_offcanvas/offcanvas-send-invoice')
 @endsection

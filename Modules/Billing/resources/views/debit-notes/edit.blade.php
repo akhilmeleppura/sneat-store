@@ -289,6 +289,12 @@
 
             formData.set('debit_note_number', document.getElementById('debitNoteId').value);
 
+            // *** ADD THIS: Get the selected payment method ID and append it to the form data ***
+            const paymentMethodId = document.getElementById('acceptPaymentsVia').value;
+            if(paymentMethodId) {
+                formData.append('payment_method_id', paymentMethodId);
+            }
+
             // Manually structure repeater data
             document.querySelectorAll('.repeater-wrapper').forEach((row, index) => {
                 const itemId = row.querySelector('.item-details')?.value;
@@ -308,7 +314,11 @@
 
             fetch("{{ route('billing.debit-notes.update', $debitNote->id) }}", {
                 method: 'POST',
-                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+                headers: { 
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}', 
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json' 
+                },
                 body: formData
             })
             .then(async response => {
@@ -517,7 +527,7 @@
                                 @endforelse
                             </div>
                             <div class="row">
-                                <div class="col-12"><button type="button" class="btn btn-sm btn-primary" data-repeater-create><i class="icon-base bx bx-plus icon-xs me-1_5"></i>Add Item</button></div>
+                                <div class="col-12"><button type="button" class="btn btn-sm btn-primary" data-repeater-create"><i class="icon-base bx bx-plus icon-xs me-1_5"></i>Add Item</button></div>
                             </div>
                         </div>
                     </form>
@@ -579,6 +589,22 @@
                     <button type="button" class="btn btn-label-secondary d-grid w-100 mb-4" onclick="previewDebitNote()">Preview</button>
                     <button type="button" id="updateDebitNoteBtn" class="btn btn-label-secondary d-grid w-100" onclick="updateDebitNote()">Update</button>
                 </div>
+            </div>
+            <div>
+                {{-- *** CHANGE: ADD DROPDOWN WITH PRE-SELECTED VALUE *** --}}
+                <label for="acceptPaymentsVia" class="form-label">Accept payments via</label>
+                <select class="form-select mb-6" id="acceptPaymentsVia" name="payment_method_id">
+                    @if(isset($personalizedPaymentOptions) && $personalizedPaymentOptions->isNotEmpty())
+                        @foreach($personalizedPaymentOptions as $option)
+                            <option value="{{ $option->id }}" {{ $debitNote->payment_method_id == $option->id ? 'selected' : '' }}>
+                                {{ $option->name }}
+                            </option>
+                        @endforeach
+                    @else
+                        <option value="" disabled>No payment options configured</option>
+                    @endif
+                </select>
+                {{-- *** (You can add your other checkboxes for Payment Terms etc. back here if needed) *** --}}
             </div>
         </div>
     </div>

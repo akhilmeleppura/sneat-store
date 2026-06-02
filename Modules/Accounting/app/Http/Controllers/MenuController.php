@@ -60,6 +60,12 @@ class MenuController extends Controller
                                     'permissions' => 'user.view'
                                 ],
                                 [
+                                    'name' => 'Customer Ledger',
+                                    'slug' => 'accounting.customer-ledger.index',
+                                    'url'  => 'accounting/customer-ledger',
+                                    'permissions' => 'user.view'
+                                ],
+                                [
                                     'name' => 'Trial Balance',
                                     'slug' => 'accounting.trial-balance.index',
                                     'url'  => 'accounting/trial-balance',
