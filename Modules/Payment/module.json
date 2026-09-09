@@ -1,0 +1,12 @@
+{
+    "name": "Payment",
+    "alias": "payment",
+    "description": "Enterprise Payment Gateway Infrastructure and Multi-Gateway Processing",
+    "keywords": ["payment", "gateway", "stripe", "paypal", "settlement"],
+    "priority": 6,
+    "providers": [
+        "Modules\\Payment\\Providers\\PaymentServiceProvider",
+        "Modules\\Payment\\Providers\\RouteServiceProvider"
+    ],
+    "files": []
+}

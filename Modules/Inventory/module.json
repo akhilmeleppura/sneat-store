@@ -1,0 +1,12 @@
+{
+    "name": "Inventory",
+    "alias": "inventory",
+    "description": "Multi-Branch Inventory & Stock Tracking with Atomic Transaction Audits",
+    "keywords": ["inventory", "stock", "warehouse", "branches"],
+    "priority": 3,
+    "providers": [
+        "Modules\\Inventory\\Providers\\InventoryServiceProvider"
+    ],
+    "files": [],
+    "enabled": true
+}

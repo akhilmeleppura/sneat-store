@@ -1,0 +1,12 @@
+{
+    "name": "Order",
+    "alias": "order",
+    "description": "Enterprise Order Management, Checkout Workflow, Pricing Engine & Taxation",
+    "keywords": ["order", "checkout", "pricing", "taxes", "ecommerce"],
+    "priority": 5,
+    "providers": [
+        "Modules\\Order\\Providers\\OrderServiceProvider"
+    ],
+    "files": [],
+    "enabled": true
+}

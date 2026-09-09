@@ -70,6 +70,12 @@ class ModuleMenuController extends Controller
     private function filterMenuByPermissions(array $menus)
     {
         $user = Auth::user();
+        if (!$user) {
+            return array_filter($menus, function ($menu) {
+                return empty($menu['permissions']);
+            });
+        }
+
         if ($user->is_supreme_admin == 1) {
             return $menus;
         }

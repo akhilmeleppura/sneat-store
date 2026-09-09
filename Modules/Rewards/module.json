@@ -1,0 +1,12 @@
+{
+    "name": "Rewards",
+    "alias": "rewards",
+    "description": "Enterprise Loyalty Points, Rewards Campaigns, and Checkout Redemption",
+    "keywords": ["rewards", "loyalty", "points", "ecommerce"],
+    "priority": 5,
+    "providers": [
+        "Modules\\Rewards\\Providers\\RewardsServiceProvider"
+    ],
+    "files": [],
+    "enabled": true
+}

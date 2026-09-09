@@ -77,8 +77,11 @@ class BranchManagement extends Controller
         $totalData = Branch::count();
         $totalFiltered = $totalData;
 
-        $limit = $request->input('length');
-        $start = $request->input('start');
+        $limit = $request->integer('length', 10);
+        if ($limit <= 0) {
+            $limit = 10;
+        }
+        $start = max(0, $request->integer('start', 0));
         $order = $columns[$request->input('order.0.column')] ?? 'id';
         $dir = $request->input('order.0.dir') ?? 'desc';
 
@@ -105,7 +108,7 @@ class BranchManagement extends Controller
                 'id' => $branch->id,
                 'name' => $branch->name,
                 'address' => $branch->address,
-                'created_at' => $branch->created_at->format('Y-m-d H:i:s'),
+                'created_at' => $branch->created_at?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
             ];
         }
 

@@ -1,0 +1,19 @@
+{
+  "name": "AK-Mart Enterprise Store",
+  "short_name": "AK-Mart",
+  "description": "Enterprise Omnichannel E-Commerce Platform built with Sneat Design System",
+  "start_url": "/sneat-store/public/",
+  "scope": "/sneat-store/public/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#696cff",
+  "icons": [
+    {
+      "src": "/sneat-store/public/assets/img/favicon/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["shopping", "ecommerce", "retail"]
+}

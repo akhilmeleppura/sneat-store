@@ -1,0 +1,12 @@
+{
+    "name": "Catalog",
+    "alias": "catalog",
+    "description": "Enterprise E-Commerce Catalog: Categories, Brands, Attributes, Products, and Variants",
+    "keywords": ["catalog", "products", "variants", "ecommerce"],
+    "priority": 2,
+    "providers": [
+        "Modules\\Catalog\\Providers\\CatalogServiceProvider"
+    ],
+    "files": [],
+    "enabled": true
+}

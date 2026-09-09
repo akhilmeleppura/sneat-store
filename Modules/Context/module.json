@@ -1,0 +1,12 @@
+{
+    "name": "Context",
+    "alias": "context",
+    "description": "Enterprise Multi-Tenant Context and Isolation Module",
+    "keywords": ["multitenancy", "store", "branch", "context"],
+    "priority": 1,
+    "providers": [
+        "Modules\\Context\\Providers\\ContextServiceProvider"
+    ],
+    "files": [],
+    "enabled": true
+}

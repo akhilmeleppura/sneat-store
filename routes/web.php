@@ -167,7 +167,7 @@ use App\Http\Controllers\entities\BranchManagement;
 // Main Page Route
 Route::group(['middleware' => 'auth:sanctum', 'verified'], function () {
 
-  Route::get('/', [Analytics::class, 'index'])->name('dashboard-analytics');
+  Route::get('/admin', [Analytics::class, 'index'])->name('admin.dashboard');
   Route::get('/dashboard/analytics', [Analytics::class, 'index'])->name('dashboard-analytics');
   Route::get('/dashboard/crm', [Crm::class, 'index'])->name('dashboard-crm');
 });
@@ -195,8 +195,8 @@ Route::get('/layouts/content-navbar', [ContentNavbar::class, 'index'])->name('la
 Route::get('/layouts/content-nav-sidebar', [ContentNavSidebar::class, 'index'])->name('layouts-content-nav-sidebar');
 Route::get('/layouts/navbar-full', [NavbarFull::class, 'index'])->name('layouts-navbar-full');
 Route::get('/layouts/navbar-full-sidebar', [NavbarFullSidebar::class, 'index'])->name('layouts-navbar-full-sidebar');
-Route::get('/layouts/horizontal', [Horizontal::class, 'index'])->name('dashboard-analytics');
-Route::get('/layouts/vertical', [Vertical::class, 'index'])->name('dashboard-analytics');
+Route::get('/layouts/horizontal', [Horizontal::class, 'index'])->name('layouts-horizontal');
+Route::get('/layouts/vertical', [Vertical::class, 'index'])->name('layouts-vertical');
 Route::get('/layouts/without-menu', [WithoutMenu::class, 'index'])->name('layouts-without-menu');
 Route::get('/layouts/without-navbar', [WithoutNavbar::class, 'index'])->name('layouts-without-navbar');
 Route::get('/layouts/fluid', [Fluid::class, 'index'])->name('layouts-fluid');
@@ -281,7 +281,7 @@ Route::get('/auth/verify-email-basic', [VerifyEmailBasic::class, 'index'])->name
 Route::get('/auth/verify-email-cover', [VerifyEmailCover::class, 'index'])->name('auth-verify-email-cover');
 Route::get('/auth/reset-password-basic', [ResetPasswordBasic::class, 'index'])->name('auth-reset-password-basic');
 Route::get('/auth/reset-password-cover', [ResetPasswordCover::class, 'index'])->name('auth-reset-password-cover');
-Route::get('/auth/forgot-password-basic', [ForgotPasswordBasic::class, 'index'])->name('auth-reset-password-basic');
+Route::get('/auth/forgot-password-basic', [ForgotPasswordBasic::class, 'index'])->name('auth-forgot-password-basic');
 Route::get('/auth/forgot-password-cover', [ForgotPasswordCover::class, 'index'])->name('auth-forgot-password-cover');
 Route::get('/auth/two-steps-basic', [TwoStepsBasic::class, 'index'])->name('auth-two-steps-basic');
 Route::get('/auth/two-steps-cover', [TwoStepsCover::class, 'index'])->name('auth-two-steps-cover');
@@ -388,7 +388,7 @@ Route::middleware([
   Route::get('/dashboard', [Analytics::class, 'index'])->name('dashboard');
 });
 
- Route::get('/accounting', [AccountingController::class, 'index'])->name('index');
+ Route::get('/accounting', [AccountingController::class, 'index'])->name('accounting.main');
 
 Route::get('/module-menus', [ModuleMenuController::class, 'index'])->name('module.menus');
 
@@ -405,4 +405,46 @@ Route::get('/branch-list', [BranchManagement::class, 'index'])->name('branch.lis
 Route::post('/branch-store', [BranchManagement::class, 'store'])->name('branch.store');
 Route::get('/branch-edit/{id}', [BranchManagement::class, 'edit'])->name('branch.edit');
 Route::delete('/branch-delete/{id}', [BranchManagement::class, 'destroy'])->name('branch.delete');
+
+// Notification Center & Feed Routes
+Route::middleware(['auth', 'tenant.context'])->group(function () {
+    Route::get('/notifications/feed', [App\Http\Controllers\NotificationController::class, 'feed'])->name('notifications.feed');
+    Route::post('/notifications/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+    Route::get('/account/notifications', [App\Http\Controllers\NotificationController::class, 'customerCenter'])->name('account.notifications');
+    Route::get('/admin/notifications', [App\Http\Controllers\NotificationController::class, 'adminCenter'])->name('admin.notifications');
+});
+
+// Admin Dashboard Redirect
+Route::middleware(['auth', 'tenant.context'])->group(function () {
+    Route::get('/admin/dashboard', function () {
+        return redirect()->route('admin.reports.sales');
+    })->name('admin.dashboard');
+});
+
+// OTP Verification Endpoints
+Route::post('/otp/send', [App\Http\Controllers\OtpController::class, 'send'])->name('otp.send');
+Route::post('/otp/verify', [App\Http\Controllers\OtpController::class, 'verify'])->name('otp.verify');
+
+// Newsletter Subscription Routes
+Route::post('/newsletter/subscribe', [\Modules\General\Http\Controllers\NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
+Route::get('/newsletter/verify/{token}', [\Modules\General\Http\Controllers\NewsletterController::class, 'verify'])->name('newsletter.verify');
+
+// Sneat Admin Newsletter Subscribers Management
+Route::prefix('admin/newsletter')->name('admin.newsletter.')->middleware(['auth', 'tenant.context'])->group(function () {
+    Route::get('/', [\Modules\General\Http\Controllers\Admin\AdminNewsletterController::class, 'index'])->name('index');
+    Route::get('/export', [\Modules\General\Http\Controllers\Admin\AdminNewsletterController::class, 'exportCsv'])->name('export');
+    Route::post('/{id}/toggle', [\Modules\General\Http\Controllers\Admin\AdminNewsletterController::class, 'toggle'])->name('toggle');
+    Route::delete('/{id}', [\Modules\General\Http\Controllers\Admin\AdminNewsletterController::class, 'destroy'])->name('destroy');
+});
+
+// SEO & Content Routes
+Route::get('/sitemap.xml', [\App\Http\Controllers\SeoController::class, 'sitemap'])->name('seo.sitemap');
+Route::get('/robots.txt', [\App\Http\Controllers\SeoController::class, 'robots'])->name('seo.robots');
+Route::get('/faq', [\Modules\General\Http\Controllers\FaqController::class, 'index'])->name('faq');
+
+// Warehouse SKU Barcode Label Routes
+Route::get('/admin/inventory/barcodes/{productId}', [\Modules\Inventory\Http\Controllers\Admin\BarcodeController::class, 'print'])->name('admin.barcodes.print')->middleware(['auth', 'tenant.context']);
+
+
 

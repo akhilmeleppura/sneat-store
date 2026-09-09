@@ -3,5 +3,14 @@
     "SampleModule": true,
     "Permission": true,
     "Billing": true,
-    "General": true
+    "General": true,
+    "Context": true,
+    "Catalog": true,
+    "Inventory": true,
+    "Cart": true,
+    "Order": true,
+    "Payment": true,
+    "Marketplace": true,
+    "Search": true,
+    "Rewards": true
 }

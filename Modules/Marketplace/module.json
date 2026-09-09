@@ -1,0 +1,12 @@
+{
+    "name": "Marketplace",
+    "alias": "marketplace",
+    "description": "Multi-Vendor Marketplace, Vendor Onboarding, Commission Engine, and Dedicated Vendor Portal",
+    "keywords": ["marketplace", "vendor", "commission", "payout"],
+    "priority": 7,
+    "providers": [
+        "Modules\\Marketplace\\Providers\\MarketplaceServiceProvider",
+        "Modules\\Marketplace\\Providers\\RouteServiceProvider"
+    ],
+    "files": []
+}

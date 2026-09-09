@@ -39,13 +39,18 @@ This project includes authentication, role and permission management, accounting
 
 ## 🧩 Enabled Modules
 
-The following modules are currently enabled:
+The application is architected as a modular, reusable, multi-tenant enterprise e-commerce ERP:
 
-* Accounting
-* Billing
-* Permission
-* General
-* SampleModule
+* **Context**: Multi-Tenancy (`Tenant` → `Store` → `Branch`), domain resolution, dynamic FX multi-currency engine.
+* **Catalog**: Product catalog, variants, attributes & values, categories, brands, specifications, and verified customer reviews.
+* **Inventory**: Branch stock ledger, atomic stock adjustments, real-time reservations, and low-stock alerts.
+* **Cart**: Shopping cart management, session/customer cart persistence, real-time stock limits, and coupon discounts.
+* **Order**: Transactional checkout engine, shipping rate calculations, shipments & carrier tracking, coupons, sales analytics, and customer self-service portal.
+* **Payment**: Multi-gateway driver architecture (Stripe, PayPal, Offline/Bank Wire, COD), webhook processing, settlement ledger, and refund auditing.
+* **Marketplace**: Multi-vendor marketplace, vendor approval workflow, vendor portal, commission splits, and payout disbursements.
+* **Permission**: Multi-tenant RBAC with granular domain permissions, role hierarchy, and guard enforcement.
+* **Notifications**: Event-driven notification center, navbar real-time feed, email & database dispatching.
+* **Accounting & Billing**: Automated financial journal entries, charts of accounts, invoices, and double-entry reconciliation.
 
 ---
 
@@ -57,11 +62,18 @@ bootstrap/
 config/
 database/
 Modules/
- ├── Accounting/
- ├── Billing/
- ├── Permission/
- ├── General/
- └── SampleModule/
+ ├── Context/       (Multi-Tenancy, Stores, Branches, FX Currencies)
+ ├── Catalog/       (Products, Variants, Attributes, Brands, Categories, Reviews)
+ ├── Inventory/     (Branch Stock, Reservations, Audit Transactions)
+ ├── Cart/          (Cart Storage, Pricing, Live Limits)
+ ├── Order/         (Checkout, Shipping, Shipments, Coupons, Customer Portal, Reports)
+ ├── Payment/       (Stripe, PayPal, Offline, Webhooks, Settlements)
+ ├── Marketplace/   (Vendors, Commissions, Vendor Portal, Payouts)
+ ├── Permission/    (RBAC, Scoped Permissions & Roles)
+ ├── Accounting/    (Double-entry Journals, Accounts)
+ ├── Billing/       (Invoices, Items, Payment Records)
+ ├── General/       (Document Templates, Menus)
+ └── SampleModule/  (Boilerplate Template)
 public/
 resources/
 routes/

@@ -36,9 +36,12 @@ class User extends Authenticatable
         'password',
         'role_id',
         'is_super_admin',
-        'is_supre_admin',
+        'is_supreme_admin',
         'company_id',
         'branch_id',
+        'tenant_id',
+        'store_id',
+        'tenant_branch_id',
     ];
 
     /**
@@ -69,6 +72,31 @@ class User extends Authenticatable
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function tenant()
+    {
+        return $this->belongsTo(\Modules\Context\Models\Tenant::class, 'tenant_id');
+    }
+
+    public function store()
+    {
+        return $this->belongsTo(\Modules\Context\Models\Store::class, 'store_id');
+    }
+
+    public function tenantBranch()
+    {
+        return $this->belongsTo(\Modules\Context\Models\Branch::class, 'tenant_branch_id');
+    }
+
+    public function vendor()
+    {
+        return $this->hasOne(\Modules\Marketplace\Models\Vendor::class, 'user_id');
+    }
+
+    public function isPlatformAdmin(): bool
+    {
+        return (bool) ($this->is_supreme_admin || $this->is_super_admin || $this->hasRole('Supreme Admin') || $this->hasRole('super-admin') || $this->hasRole('platform-admin'));
     }
     /**
      * Get the attributes that should be cast.

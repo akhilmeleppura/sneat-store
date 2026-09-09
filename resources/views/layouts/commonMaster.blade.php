@@ -68,6 +68,18 @@
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="{{ asset('assets/img/favicon/favicon.ico') }}" />
 
+  <!-- PWA & Mobile Capabilities -->
+  <link rel="manifest" href="{{ asset('manifest.json') }}" />
+  <meta name="theme-color" content="#696cff" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="AK-Mart" />
+  <link rel="apple-touch-icon" href="{{ asset('assets/img/favicon/favicon.ico') }}" />
+
+  <!-- Structured Data / JSON-LD -->
+  @include('layouts.sections.schema-jsonld')
+
   <!-- Include Styles -->
   <!-- $isFront is used to append the front layout styles only on the front layout otherwise the variable will be blank -->
   @include('layouts/sections/styles' . $isFront)
@@ -93,11 +105,27 @@
   @yield('layoutContent')
   <!--/ Layout Content -->
 
-  
+  <!-- Cookie Consent Banner -->
+  @include('layouts.sections.cookie-banner')
 
   <!-- Include Scripts -->
   <!-- $isFront is used to append the front layout scripts only on the front layout otherwise the variable will be blank -->
   @include('layouts/sections/scripts' . $isFront)
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('{{ asset("sw.js") }}')
+          .then(function(reg) {
+            console.log('[Sneat PWA] Service Worker registered with scope:', reg.scope);
+          })
+          .catch(function(err) {
+            console.debug('[Sneat PWA] Service Worker skipped or unavailable:', err);
+          });
+      });
+    }
+  </script>
 </body>
 
 </html>

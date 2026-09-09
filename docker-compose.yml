@@ -46,6 +46,21 @@ services:
                 - '-p${DB_PASSWORD}'
             retries: 3
             timeout: 5s
+    redis:
+        image: redis:alpine
+        ports:
+            - "6379:6379"
+        networks:
+            - sail
+    meilisearch:
+        image: getmeili/meilisearch:latest
+        ports:
+            - "7700:7700"
+        environment:
+            - MEILI_NO_ANALYTICS=true
+        networks:
+            - sail
+
 networks:
     sail:
         driver: bridge

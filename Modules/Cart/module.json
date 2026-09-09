@@ -1,0 +1,12 @@
+{
+    "name": "Cart",
+    "alias": "cart",
+    "description": "Multi-Tenant Shopping Cart with Guest & User Session Merging",
+    "keywords": ["cart", "shopping", "ecommerce"],
+    "priority": 4,
+    "providers": [
+        "Modules\\Cart\\Providers\\CartServiceProvider"
+    ],
+    "files": [],
+    "enabled": true
+}

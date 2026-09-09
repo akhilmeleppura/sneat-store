@@ -37,6 +37,260 @@
       ]
     },
     {
+      "menuHeader": "Store & Catalog"
+    },
+    {
+      "name": "Product Catalog",
+      "icon": "menu-icon icon-base bx bx-package",
+      "slug": "catalog",
+      "submenu": [
+        {
+          "url": "catalog/products",
+          "name": "All Products",
+          "slug": "catalog-products"
+        },
+        {
+          "url": "catalog/products/create",
+          "name": "Add Product",
+          "slug": "catalog-products-create"
+        },
+        {
+          "url": "catalog/categories",
+          "name": "Categories",
+          "slug": "catalog-categories"
+        },
+        {
+          "url": "catalog/brands",
+          "name": "Brands",
+          "slug": "catalog-brands"
+        },
+        {
+          "url": "catalog/reviews",
+          "name": "Product Reviews",
+          "slug": "catalog-reviews"
+        },
+        {
+          "url": "admin/back-in-stock",
+          "name": "Back-in-Stock Alerts",
+          "slug": "admin-back-in-stock-index"
+        }
+      ]
+    },
+    {
+      "name": "Inventory & Stock",
+      "icon": "menu-icon icon-base bx bx-store-alt",
+      "slug": "inventory",
+      "submenu": [
+        {
+          "url": "inventory",
+          "name": "Stock Levels",
+          "slug": "inventory-index"
+        },
+        {
+          "url": "inventory/transactions",
+          "name": "Audit Logs",
+          "slug": "inventory-transactions"
+        }
+      ]
+    },
+    {
+      "name": "Orders & Sales",
+      "icon": "menu-icon icon-base bx bx-cart",
+      "slug": "orders",
+      "submenu": [
+        {
+          "url": "admin/orders",
+          "name": "All Orders",
+          "slug": "admin-orders-index"
+        },
+        {
+          "url": "admin/shipping-methods",
+          "name": "Shipping Carriers",
+          "slug": "admin-shipping-methods-index"
+        },
+        {
+          "url": "admin/shipments",
+          "name": "Shipments & Tracking",
+          "slug": "admin-shipments-index"
+        },
+        {
+          "url": "admin/coupons",
+          "name": "Coupons & Discounts",
+          "slug": "admin-coupons-index"
+        },
+        {
+          "url": "admin/rewards",
+          "name": "Rewards & Loyalty",
+          "slug": "admin-rewards-index"
+        },
+        {
+          "url": "admin/abandoned-carts",
+          "name": "Abandoned Carts",
+          "slug": "admin-abandoned-carts-index"
+        },
+        {
+          "url": "admin/affiliates",
+          "name": "Affiliate Program",
+          "slug": "admin-affiliates-index"
+        },
+        {
+          "url": "admin/payments",
+          "name": "Transactions & Settlement",
+          "slug": "admin-payments-index"
+        },
+        {
+          "url": "admin/rma",
+          "name": "Returns & RMA",
+          "slug": "admin-rma-index"
+        },
+        {
+          "url": "admin/rfq",
+          "name": "B2B Quotes (RFQ)",
+          "slug": "admin-rfq-index"
+        },
+        {
+          "url": "admin/gift-cards",
+          "name": "Gift Cards",
+          "slug": "admin-gift-cards-index"
+        },
+        {
+          "url": "admin/taxes",
+          "name": "Tax Rates & VAT",
+          "slug": "admin-taxes-index"
+        },
+        {
+          "url": "admin/newsletter",
+          "name": "Newsletter Subscribers",
+          "slug": "admin-newsletter-index"
+        },
+        {
+          "url": "store/cart",
+          "name": "Shopping Cart",
+          "slug": "store-cart"
+        },
+        {
+          "url": "store/checkout",
+          "name": "Checkout",
+          "slug": "store-checkout"
+        }
+      ]
+    },
+    {
+      "name": "Marketplace",
+      "icon": "menu-icon icon-base bx bx-store-alt",
+      "slug": "marketplace",
+      "submenu": [
+        {
+          "url": "admin/marketplace/vendors",
+          "name": "All Vendors",
+          "slug": "admin-marketplace-vendors"
+        },
+        {
+          "url": "admin/marketplace/payouts",
+          "name": "Payout Requests",
+          "slug": "admin-marketplace-payouts"
+        },
+        {
+          "url": "vendor/dashboard",
+          "name": "Vendor Portal",
+          "slug": "vendor-dashboard"
+        }
+      ]
+    },
+    {
+      "name": "Reports & Analytics",
+      "icon": "menu-icon icon-base bx bx-bar-chart-alt-2",
+      "slug": "reports",
+      "submenu": [
+        {
+          "url": "admin/reports/sales",
+          "name": "Sales Analytics",
+          "slug": "admin-reports-sales"
+        },
+        {
+          "url": "admin/reports/vendors",
+          "name": "Vendor Performance",
+          "slug": "admin-reports-vendors"
+        },
+        {
+          "url": "admin/reports/inventory",
+          "name": "Inventory Health",
+          "slug": "admin-reports-inventory"
+        }
+      ]
+    },
+    {
+      "name": "Currencies & FX",
+      "icon": "menu-icon icon-base bx bx-money",
+      "slug": "admin-currencies",
+      "url": "admin/currencies"
+    },
+    {
+      "name": "Tenant Settings",
+      "icon": "menu-icon icon-base bx bx-slider",
+      "slug": "admin-tenant-settings",
+      "url": "admin/settings/tenant"
+    },
+    {
+      "name": "Accounting",
+      "icon": "menu-icon icon-base bx bx-calculator",
+      "slug": "accounting",
+      "submenu": [
+        {
+          "url": "accounting/chart-of-accounts",
+          "name": "Chart of Accounts",
+          "slug": "accounting-chart-of-accounts"
+        },
+        {
+          "url": "accounting/journal",
+          "name": "Journal Entries",
+          "slug": "accounting-journal"
+        },
+        {
+          "url": "accounting/ledger",
+          "name": "General Ledger",
+          "slug": "accounting-ledger"
+        },
+        {
+          "url": "accounting/trial-balance",
+          "name": "Trial Balance",
+          "slug": "accounting-trial-balance"
+        },
+        {
+          "url": "accounting/customer-ledger",
+          "name": "Customer Ledger",
+          "slug": "accounting-customer-ledger"
+        }
+      ]
+    },
+    {
+      "name": "Billing & Invoicing",
+      "icon": "menu-icon icon-base bx bx-receipt",
+      "slug": "billing",
+      "submenu": [
+        {
+          "url": "accounting/billings",
+          "name": "All Invoices",
+          "slug": "billing-invoices"
+        },
+        {
+          "url": "accounting/billings/debit-notes",
+          "name": "Debit Notes",
+          "slug": "billing-debit-notes"
+        },
+        {
+          "url": "accounting/billings/credit-notes",
+          "name": "Credit Notes",
+          "slug": "billing-credit-notes"
+        },
+        {
+          "url": "payment-options",
+          "name": "Payment Options",
+          "slug": "billing-payment-options"
+        }
+      ]
+    },
+    {
       "name": "Layouts",
       "icon": "menu-icon icon-base bx bx-layout",
       "slug": "layouts",

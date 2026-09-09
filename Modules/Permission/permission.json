@@ -2,17 +2,10 @@
   {
     "module": "User Management",
     "permissions": [
-      { "name": "user.view", "label": "View" },
-      { "name": "user.create", "label": "Create" },
-      { "name": "user.edit", "label": "Edit" },
-      { "name": "user.delete", "label": "Delete" }
-    ]
-  },
-  {
-    "module": "Order Management",
-    "permissions": [
-      { "name": "order.view", "label": "View" },
-      { "name": "order.update-status", "label": "Update Status" }
+      { "name": "user.view", "label": "View Users" },
+      { "name": "user.create", "label": "Create User" },
+      { "name": "user.edit", "label": "Edit User" },
+      { "name": "user.delete", "label": "Delete User" }
     ]
   },
   {
@@ -28,6 +21,84 @@
     ]
   },
   {
+    "module": "Tenancy Context",
+    "permissions": [
+      { "name": "tenant.view", "label": "View Tenants" },
+      { "name": "tenant.create", "label": "Create Tenant" },
+      { "name": "tenant.edit", "label": "Edit Tenant" },
+      { "name": "store.view", "label": "View Stores" },
+      { "name": "store.manage", "label": "Manage Stores" },
+      { "name": "branch.view", "label": "View Branches" },
+      { "name": "branch.manage", "label": "Manage Branches" },
+      { "name": "currency.manage", "label": "Manage Currencies" }
+    ]
+  },
+  {
+    "module": "Catalog Management",
+    "permissions": [
+      { "name": "catalog.product.view", "label": "View Products" },
+      { "name": "catalog.product.create", "label": "Create Product" },
+      { "name": "catalog.product.edit", "label": "Edit Product" },
+      { "name": "catalog.product.delete", "label": "Delete Product" },
+      { "name": "catalog.category.manage", "label": "Manage Categories" },
+      { "name": "catalog.brand.manage", "label": "Manage Brands" },
+      { "name": "catalog.attribute.manage", "label": "Manage Attributes" },
+      { "name": "catalog.review.manage", "label": "Manage Reviews" },
+      { "name": "catalog.back-in-stock.manage", "label": "Manage Back-in-Stock Alerts" }
+    ]
+  },
+  {
+    "module": "Inventory Management",
+    "permissions": [
+      { "name": "inventory.view", "label": "View Stock" },
+      { "name": "inventory.adjust", "label": "Adjust Stock" },
+      { "name": "inventory.transfer", "label": "Transfer Stock" },
+      { "name": "inventory.report", "label": "Inventory Reports" }
+    ]
+  },
+  {
+    "module": "Order Management",
+    "permissions": [
+      { "name": "order.view", "label": "View Orders" },
+      { "name": "order.create", "label": "Create Order" },
+      { "name": "order.update-status", "label": "Update Order Status" },
+      { "name": "order.cancel", "label": "Cancel Order" },
+      { "name": "shipment.view", "label": "View Shipments" },
+      { "name": "shipment.manage", "label": "Manage Shipments" },
+      { "name": "shipping-method.manage", "label": "Manage Shipping Methods" },
+      { "name": "coupon.manage", "label": "Manage Coupons" },
+      { "name": "order.rma.manage", "label": "Manage RMA Returns" },
+      { "name": "order.rfq.manage", "label": "Manage B2B Quotes" },
+      { "name": "gift-card.manage", "label": "Manage Gift Cards" },
+      { "name": "tax-rate.manage", "label": "Manage Tax Rates" }
+    ]
+  },
+  {
+    "module": "Payment Management",
+    "permissions": [
+      { "name": "payment.transaction.view", "label": "View Transactions" },
+      { "name": "payment.transaction.refund", "label": "Refund Transaction" },
+      { "name": "payment.gateway.configure", "label": "Configure Gateways" }
+    ]
+  },
+  {
+    "module": "Marketplace Management",
+    "permissions": [
+      { "name": "marketplace.vendor.view", "label": "View Vendors" },
+      { "name": "marketplace.vendor.manage", "label": "Manage Vendors" },
+      { "name": "marketplace.vendor.approve", "label": "Approve Vendors" },
+      { "name": "marketplace.payout.view", "label": "View Payouts" },
+      { "name": "marketplace.payout.approve", "label": "Approve Payouts" }
+    ]
+  },
+  {
+    "module": "Notification Management",
+    "permissions": [
+      { "name": "notification.view", "label": "View Notifications" },
+      { "name": "notification.manage", "label": "Manage Notifications" }
+    ]
+  },
+  {
     "module": "Journal Management",
     "permissions": [
       { "name": "accounting.journal.view", "label": "View Journal Entries" },
@@ -35,6 +106,22 @@
       { "name": "accounting.journal.edit", "label": "Edit Journal Entry" },
       { "name": "accounting.journal.delete", "label": "Delete Journal Entry" },
       { "name": "accounting.journal.approve", "label": "Approve Journal Entry" }
+    ]
+  },
+  {
+    "module": "Billing Management",
+    "permissions": [
+      { "name": "billing.invoice.view", "label": "View Invoices" },
+      { "name": "billing.invoice.create", "label": "Create Invoice" },
+      { "name": "billing.invoice.edit", "label": "Edit Invoice" },
+      { "name": "billing.payment.manage", "label": "Manage Payments" }
+    ]
+  },
+  {
+    "module": "Marketing Management",
+    "permissions": [
+      { "name": "newsletter.manage", "label": "Manage Newsletter Subscribers" },
+      { "name": "loyalty.manage", "label": "Manage Loyalty Points" }
     ]
   }
 ]

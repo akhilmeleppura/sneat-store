@@ -1,0 +1,12 @@
+{
+    "name": "Search",
+    "alias": "search",
+    "description": "Full‑text and faceted product search using Laravel Scout",
+    "keywords": ["search", "scout", "meilisearch"],
+    "priority": 5,
+    "providers": [
+        "Modules\\Search\\Providers\\SearchServiceProvider"
+    ],
+    "files": [],
+    "enabled": true
+}

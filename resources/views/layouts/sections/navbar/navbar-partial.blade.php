@@ -48,12 +48,119 @@ use Illuminate\Support\Facades\Route;
     @if (isset($menuHorizontal))
     <!-- Search -->
     <li class="nav-item navbar-search-wrapper me-2 me-xl-0">
-      <a class="nav-item nav-link search-toggler px-0" href="javascript:void(0);">
+      <a class="nav-link search-toggler px-0" href="javascript:void(0);">
         <span class="d-inline-block text-body-secondary fw-normal" id="autocomplete"></span>
       </a>
     </li>
     <!-- /Search -->
     @endif
+
+    <!-- Context (Tenant & Store) Switcher -->
+    @php
+      $navTenant = \Modules\Context\Facades\Context::currentTenant();
+      $navStore = \Modules\Context\Facades\Context::currentStore();
+      $navAllTenants = \Modules\Context\Models\Tenant::active()->get();
+      $navTenantStores = $navTenant ? $navTenant->stores()->active()->get() : collect();
+    @endphp
+    @if($navAllTenants->isNotEmpty())
+    <li class="nav-item dropdown me-2 me-xl-1">
+      <a class="nav-link dropdown-toggle hide-arrow d-flex align-items-center gap-1" href="javascript:void(0);" data-bs-toggle="dropdown" title="Active Tenant & Store">
+        <span class="badge bg-label-info px-2 py-1 fw-bold d-flex align-items-center gap-1">
+          <i class="bx bx-store-alt fs-6"></i>
+          <span>{{ $navStore ? $navStore->name : ($navTenant ? $navTenant->name : 'Store Context') }}</span>
+        </span>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-end py-2 shadow" style="min-width: 250px;">
+        <li class="dropdown-header text-uppercase small text-muted pb-1 d-flex justify-content-between align-items-center">
+          <span>Active Context</span>
+          @if($navTenant)
+            <span class="badge bg-label-primary font-monospace text-lowercase" style="font-size: 10px;">{{ $navTenant->slug }}</span>
+          @endif
+        </li>
+
+        @if($navAllTenants->count() > 1)
+          <li class="px-3 py-1">
+            <small class="text-muted fw-bold text-uppercase d-block" style="font-size: 11px;">Tenants</small>
+          </li>
+          @foreach($navAllTenants as $t)
+            <li>
+              <a class="dropdown-item d-flex align-items-center justify-content-between py-1 {{ ($navTenant && $navTenant->id === $t->id) ? 'active' : '' }}" href="{{ route('context.switch.tenant', $t->id) }}">
+                <span class="d-flex align-items-center gap-2">
+                  <i class="bx bx-buildings"></i>
+                  <span>{{ $t->name }}</span>
+                </span>
+                @if($navTenant && $navTenant->id === $t->id)
+                  <i class="bx bx-check text-primary"></i>
+                @endif
+              </a>
+            </li>
+          @endforeach
+          <li><hr class="dropdown-divider my-1"></li>
+        @endif
+
+        @if($navTenantStores->isNotEmpty())
+          <li class="px-3 py-1">
+            <small class="text-muted fw-bold text-uppercase d-block" style="font-size: 11px;">Stores ({{ $navTenant->name }})</small>
+          </li>
+          @foreach($navTenantStores as $s)
+            <li>
+              <a class="dropdown-item d-flex align-items-center justify-content-between py-1 {{ ($navStore && $navStore->id === $s->id) ? 'active' : '' }}" href="{{ route('context.switch.store', $s->id) }}">
+                <span class="d-flex align-items-center gap-2">
+                  <i class="bx bx-store"></i>
+                  <span>{{ $s->name }}</span>
+                </span>
+                @if($navStore && $navStore->id === $s->id)
+                  <i class="bx bx-check text-success"></i>
+                @endif
+              </a>
+            </li>
+          @endforeach
+          <li><hr class="dropdown-divider my-1"></li>
+        @endif
+
+        <li>
+          <a class="dropdown-item text-primary small py-1" href="{{ route('admin.tenant.settings') }}">
+            <i class="bx bx-slider me-1"></i> Tenant & Store Settings
+          </a>
+        </li>
+      </ul>
+    </li>
+    @endif
+    <!--/ Context Switcher -->
+
+    <!-- Currency Switcher -->
+    @php
+      $adminAllCurrencies = app(\Modules\Context\Services\CurrencyService::class)->getActiveCurrencies();
+      $adminCurrentCurrency = app(\Modules\Context\Services\CurrencyService::class)->getCurrentCurrency();
+    @endphp
+    <li class="nav-item dropdown me-2 me-xl-1">
+      <a class="nav-link dropdown-toggle hide-arrow d-flex align-items-center gap-1" href="javascript:void(0);" data-bs-toggle="dropdown" title="Active Currency">
+        <span class="badge bg-label-primary px-2 py-1 fw-bold">
+          {{ $adminCurrentCurrency->code }} {{ $adminCurrentCurrency->symbol }}
+        </span>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-end py-1" style="min-width: 190px;">
+        <li class="dropdown-header text-uppercase small text-muted pb-1">Currency</li>
+        @foreach($adminAllCurrencies as $c)
+          <li>
+            <a class="dropdown-item d-flex align-items-center justify-content-between py-2 {{ $c->code === $adminCurrentCurrency->code ? 'active' : '' }}" href="{{ route('currency.switch.get', $c->code) }}">
+              <span class="d-flex align-items-center gap-2">
+                <span class="fw-bold">{{ $c->symbol }}</span>
+                <span>{{ $c->code }}</span>
+              </span>
+              <small class="text-muted">{{ $c->name }}</small>
+            </a>
+          </li>
+        @endforeach
+        <li><hr class="dropdown-divider my-1"></li>
+        <li>
+          <a class="dropdown-item text-primary small py-1" href="{{ route('admin.currencies.index') }}">
+            <i class="bx bx-cog me-1"></i> Manage FX Rates
+          </a>
+        </li>
+      </ul>
+    </li>
+    <!--/ Currency Switcher -->
 
     <!-- Language -->
     <li class="nav-item dropdown-language dropdown me-2 me-xl-0">
@@ -204,220 +311,78 @@ use Illuminate\Support\Facades\Route;
     </li>
     <!-- Quick links -->
 
+    @php
+      $userNotifications = Auth::check() ? Auth::user()->notifications()->take(6)->get() : collect();
+      $unreadNotificationCount = Auth::check() ? Auth::user()->unreadNotifications()->count() : 0;
+    @endphp
     <!-- Notification -->
     <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-2">
       <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown"
         data-bs-auto-close="outside" aria-expanded="false">
         <span class="position-relative">
           <i class="icon-base bx bx-bell icon-md"></i>
-          <span class="badge rounded-pill bg-danger badge-dot badge-notifications border"></span>
+          @if($unreadNotificationCount > 0)
+            <span class="badge rounded-pill bg-danger badge-dot badge-notifications border"></span>
+          @endif
         </span>
       </a>
       <ul class="dropdown-menu dropdown-menu-end p-0">
         <li class="dropdown-menu-header border-bottom">
           <div class="dropdown-header d-flex align-items-center py-3">
-            <h6 class="mb-0 me-auto">Notification</h6>
+            <h6 class="mb-0 me-auto">Notifications</h6>
             <div class="d-flex align-items-center h6 mb-0">
-              <span class="badge bg-label-primary me-2">8 New</span>
-              <a href="javascript:void(0)" class="dropdown-notifications-all p-2" data-bs-toggle="tooltip"
-                data-bs-placement="top" title="Mark all as read"><i
-                  class="icon-base bx bx-envelope-open text-heading"></i></a>
+              @if($unreadNotificationCount > 0)
+                <span class="badge bg-label-primary me-2">{{ $unreadNotificationCount }} New</span>
+                <form action="{{ route('notifications.mark-all-read') }}" method="POST" class="m-0">
+                  @csrf
+                  <button type="submit" class="btn btn-text-secondary btn-sm p-0 border-0 bg-transparent" title="Mark all as read">
+                    <i class="icon-base bx bx-envelope-open text-heading"></i>
+                  </button>
+                </form>
+              @endif
             </div>
           </div>
         </li>
         <li class="dropdown-notifications-list scrollable-container">
           <ul class="list-group list-group-flush">
-            <li class="list-group-item list-group-item-action dropdown-notifications-item">
-              <div class="d-flex">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar">
-                    <img src="{{ asset('assets/img/avatars/1.png') }}" alt class="rounded-circle" />
+            @forelse($userNotifications as $n)
+              @php
+                $nData = $n->data;
+                $isUnread = is_null($n->read_at);
+                $nColor = $nData['color'] ?? 'primary';
+                $nIcon = $nData['icon'] ?? 'bx-bell';
+              @endphp
+              <li class="list-group-item list-group-item-action dropdown-notifications-item {{ $isUnread ? '' : 'marked-as-read' }}">
+                <a href="{{ $nData['url'] ?? route('admin.notifications') }}" class="text-reset text-decoration-none d-flex">
+                  <div class="flex-shrink-0 me-3">
+                    <div class="avatar">
+                      <span class="avatar-initial rounded-circle bg-label-{{ $nColor }}">
+                        <i class="icon-base bx {{ $nIcon }}"></i>
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="small mb-0">Congratulation Lettie 🎉</h6>
-                  <small class="mb-1 d-block text-body">Won the monthly best seller gold badge</small>
-                  <small class="text-body-secondary">1h ago</small>
-                </div>
-                <div class="flex-shrink-0 dropdown-notifications-actions">
-                  <a href="javascript:void(0)" class="dropdown-notifications-read"><span
-                      class="badge badge-dot"></span></a>
-                  <a href="javascript:void(0)" class="dropdown-notifications-archive"><span
-                      class="icon-base bx bx-x"></span></a>
-                </div>
-              </div>
-            </li>
-            <li class="list-group-item list-group-item-action dropdown-notifications-item">
-              <div class="d-flex">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar">
-                    <span class="avatar-initial rounded-circle bg-label-danger">CF</span>
+                  <div class="flex-grow-1">
+                    <h6 class="small mb-0 {{ $isUnread ? 'fw-bold' : '' }}">{{ $nData['title'] ?? 'Notification' }}</h6>
+                    <small class="mb-1 d-block text-body">{{ \Illuminate\Support\Str::limit($nData['message'] ?? '', 45) }}</small>
+                    <small class="text-body-secondary">{{ $n->created_at->diffForHumans() }}</small>
                   </div>
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="small mb-0">Charles Franklin</h6>
-                  <small class="mb-1 d-block text-body">Accepted your connection</small>
-                  <small class="text-body-secondary">12hr ago</small>
-                </div>
-                <div class="flex-shrink-0 dropdown-notifications-actions">
-                  <a href="javascript:void(0)" class="dropdown-notifications-read"><span
-                      class="badge badge-dot"></span></a>
-                  <a href="javascript:void(0)" class="dropdown-notifications-archive"><span
-                      class="icon-base bx bx-x"></span></a>
-                </div>
-              </div>
-            </li>
-            <li class="list-group-item list-group-item-action dropdown-notifications-item marked-as-read">
-              <div class="d-flex">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar">
-                    <img src="{{ asset('assets/img/avatars/2.png') }}" alt class="rounded-circle" />
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="small mb-0">New Message ✉️</h6>
-                  <small class="mb-1 d-block text-body">You have new message from Natalie</small>
-                  <small class="text-body-secondary">1h ago</small>
-                </div>
-                <div class="flex-shrink-0 dropdown-notifications-actions">
-                  <a href="javascript:void(0)" class="dropdown-notifications-read">
-                    <span class="badge badge-dot"></span>
-                  </a>
-                  <a href="javascript:void(0)" class="dropdown-notifications-archive">
-                    <span class="icon-base bx bx-x"></span>
-                  </a>
-                </div>
-              </div>
-            </li>
-            <li class="list-group-item list-group-item-action dropdown-notifications-item">
-              <div class="d-flex">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar">
-                    <span class="avatar-initial rounded-circle bg-label-success">
-                      <i class="icon-base bx bx-cart"></i>
-                    </span>
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="small mb-0">Whoo! You have new order 🛒</h6>
-                  <small class="mb-1 d-block text-body">ACME Inc. made new order $1,154</small>
-                  <small class="text-body-secondary">1 day ago</small>
-                </div>
-                <div class="flex-shrink-0 dropdown-notifications-actions">
-                  <a href="javascript:void(0)" class="dropdown-notifications-read"><span
-                      class="badge badge-dot"></span></a>
-                  <a href="javascript:void(0)" class="dropdown-notifications-archive"><span
-                      class="icon-base bx bx-x"></span></a>
-                </div>
-              </div>
-            </li>
-            <li class="list-group-item list-group-item-action dropdown-notifications-item marked-as-read">
-              <div class="d-flex">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar">
-                    <img src="{{ asset('assets/img/avatars/9.png') }}" alt class="rounded-circle" />
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="small mb-0">Application has been approved 🚀</h6>
-                  <small class="mb-1 d-block text-body">Your ABC project application has been approved.</small>
-                  <small class="text-body-secondary">2 days ago</small>
-                </div>
-                <div class="flex-shrink-0 dropdown-notifications-actions">
-                  <a href="javascript:void(0)" class="dropdown-notifications-read"><span
-                      class="badge badge-dot"></span></a>
-                  <a href="javascript:void(0)" class="dropdown-notifications-archive"><span
-                      class="icon-base bx bx-x"></span></a>
-                </div>
-              </div>
-            </li>
-            <li class="list-group-item list-group-item-action dropdown-notifications-item marked-as-read">
-              <div class="d-flex">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar">
-                    <span class="avatar-initial rounded-circle bg-label-success"><i
-                        class="icon-base bx bx-pie-chart-alt"></i></span>
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="small mb-0">Monthly report is generated</h6>
-                  <small class="mb-1 d-block text-body">July monthly financial report is generated </small>
-                  <small class="text-body-secondary">3 days ago</small>
-                </div>
-                <div class="flex-shrink-0 dropdown-notifications-actions">
-                  <a href="javascript:void(0)" class="dropdown-notifications-read"><span
-                      class="badge badge-dot"></span></a>
-                  <a href="javascript:void(0)" class="dropdown-notifications-archive"><span
-                      class="icon-base bx bx-x"></span></a>
-                </div>
-              </div>
-            </li>
-            <li class="list-group-item list-group-item-action dropdown-notifications-item marked-as-read">
-              <div class="d-flex">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar">
-                    <img src="{{ asset('assets/img/avatars/5.png') }}" alt class="rounded-circle" />
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="small mb-0">Send connection request</h6>
-                  <small class="mb-1 d-block text-body">Peter sent you connection request</small>
-                  <small class="text-body-secondary">4 days ago</small>
-                </div>
-                <div class="flex-shrink-0 dropdown-notifications-actions">
-                  <a href="javascript:void(0)" class="dropdown-notifications-read"><span
-                      class="badge badge-dot"></span></a>
-                  <a href="javascript:void(0)" class="dropdown-notifications-archive"><span
-                      class="icon-base bx bx-x"></span></a>
-                </div>
-              </div>
-            </li>
-            <li class="list-group-item list-group-item-action dropdown-notifications-item">
-              <div class="d-flex">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar">
-                    <img src="{{ asset('assets/img/avatars/6.png') }}" alt class="rounded-circle" />
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="small mb-0">New message from Jane</h6>
-                  <small class="mb-1 d-block text-body">Your have new message from Jane</small>
-                  <small class="text-body-secondary">5 days ago</small>
-                </div>
-                <div class="flex-shrink-0 dropdown-notifications-actions">
-                  <a href="javascript:void(0)" class="dropdown-notifications-read"><span
-                      class="badge badge-dot"></span></a>
-                  <a href="javascript:void(0)" class="dropdown-notifications-archive"><span
-                      class="icon-base bx bx-x"></span></a>
-                </div>
-              </div>
-            </li>
-            <li class="list-group-item list-group-item-action dropdown-notifications-item marked-as-read">
-              <div class="d-flex">
-                <div class="flex-shrink-0 me-3">
-                  <div class="avatar">
-                    <span class="avatar-initial rounded-circle bg-label-warning"><i
-                        class="icon-base bx bx-error"></i></span>
-                  </div>
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="small mb-0">CPU is running high</h6>
-                  <small class="mb-1 d-block text-body">CPU Utilization Percent is currently at 88.63%,</small>
-                  <small class="text-body-secondary">5 days ago</small>
-                </div>
-                <div class="flex-shrink-0 dropdown-notifications-actions">
-                  <a href="javascript:void(0)" class="dropdown-notifications-read"><span
-                      class="badge badge-dot"></span></a>
-                  <a href="javascript:void(0)" class="dropdown-notifications-archive"><span
-                      class="icon-base bx bx-x"></span></a>
-                </div>
-              </div>
-            </li>
+                  @if($isUnread)
+                    <div class="flex-shrink-0 dropdown-notifications-actions ms-2 align-self-center">
+                      <span class="badge badge-dot bg-{{ $nColor }}"></span>
+                    </div>
+                  @endif
+                </a>
+              </li>
+            @empty
+              <li class="list-group-item text-center py-4 text-muted">
+                <small>No notifications yet</small>
+              </li>
+            @endforelse
           </ul>
         </li>
         <li class="border-top">
-          <div class="d-grid p-4">
-            <a class="btn btn-primary btn-sm d-flex" href="javascript:void(0);">
+          <div class="d-grid p-3">
+            <a class="btn btn-primary btn-sm d-flex justify-content-center" href="{{ route('admin.notifications') }}">
               <small class="align-middle">View all notifications</small>
             </a>
           </div>
@@ -479,6 +444,14 @@ use Illuminate\Support\Facades\Route;
               <i class="flex-shrink-0 icon-base bx bx-credit-card icon-md me-3"></i>
               <span class="flex-grow-1 align-middle">Billing Plan</span>
               <span class="flex-shrink-0 badge rounded-pill bg-danger">4</span>
+            </span>
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="{{ route('admin.tenant.settings') }}">
+            <span class="d-flex align-items-center align-middle">
+              <i class="flex-shrink-0 icon-base bx bx-slider icon-md me-3"></i>
+              <span class="flex-grow-1 align-middle">Tenant Settings</span>
             </span>
           </a>
         </li>

@@ -28,5 +28,31 @@ class AppServiceProvider extends ServiceProvider
             }
             return [];
         });
+
+        // Register E-Commerce Lifecycle & Marketplace Notification Listeners
+        \Illuminate\Support\Facades\Event::listen(
+            \Modules\Order\Events\OrderPlacedEvent::class,
+            [\Modules\Order\Listeners\SendOrderPlacedNotifications::class, 'handle']
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \Modules\Payment\Events\OrderPaymentSettledEvent::class,
+            [\Modules\Payment\Listeners\SendOrderSettledNotifications::class, 'handle']
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \Modules\Inventory\Events\LowStockAlertEvent::class,
+            [\Modules\Inventory\Listeners\SendLowStockNotification::class, 'handle']
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \Modules\Marketplace\Events\VendorPayoutRequestedEvent::class,
+            [\Modules\Marketplace\Listeners\SendVendorPayoutNotification::class, 'handleRequested']
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \Modules\Marketplace\Events\VendorPayoutApprovedEvent::class,
+            [\Modules\Marketplace\Listeners\SendVendorPayoutNotification::class, 'handleApproved']
+        );
     }
 }
