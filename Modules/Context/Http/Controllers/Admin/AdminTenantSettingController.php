@@ -25,7 +25,7 @@ class AdminTenantSettingController extends Controller
         }
 
         // Fetch all active currencies for dropdown selection
-        $currencies = Currency::where('status', 'active')->get();
+        $currencies = Currency::where('is_active', true)->get();
 
         // Retrieve current settings grouped for easy display
         $settings = [

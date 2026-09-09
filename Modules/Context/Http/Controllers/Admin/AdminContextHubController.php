@@ -24,7 +24,7 @@ class AdminContextHubController extends Controller
         $tenants = Tenant::with(['stores.branches', 'defaultStore'])->orderBy('name')->get();
         $stores = Store::withoutTenancy()->with(['tenant', 'branches', 'defaultBranch'])->orderBy('name')->get();
         $branches = Branch::withoutTenancy()->with(['tenant', 'store'])->orderBy('name')->get();
-        $currencies = Currency::where('status', 'active')->orderBy('code')->get();
+        $currencies = Currency::where('is_active', true)->orderBy('code')->get();
 
         // Statistics
         $stats = [

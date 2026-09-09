@@ -34,6 +34,14 @@ class Currency extends Model
     ];
 
     /**
+     * Scope a query to only active currencies.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
      * Format an amount in this currency.
      */
     public function format(float $amount): string
