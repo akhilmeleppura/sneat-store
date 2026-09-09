@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Context\Http\Controllers\Admin\AdminContextHubController;
 use Modules\Context\Http\Controllers\Admin\AdminCurrencyController;
 use Modules\Context\Http\Controllers\Admin\AdminTenantSettingController;
 use Modules\Context\Http\Controllers\ContextSwitcherController;
@@ -22,6 +23,30 @@ Route::get('/branch/switch/{id}', [StoreBranchController::class, 'switchBranch']
 Route::get('/store/locations', [StoreBranchController::class, 'locations'])->name('store.locations');
 Route::get('/api/branches', [StoreBranchController::class, 'apiBranches'])->name('api.branches');
 
+// Sneat Admin All-in-One Multi-Tenancy & Store Hierarchy Hub
+Route::prefix('admin/context')
+    ->name('admin.context.')
+    ->middleware(['auth', 'tenant.context'])
+    ->group(function () {
+        Route::get('/', [AdminContextHubController::class, 'index'])->name('index');
+        Route::post('/switch', [AdminContextHubController::class, 'switchContext'])->name('switch');
+
+        // Tenant CRUD
+        Route::post('/tenants', [AdminContextHubController::class, 'storeTenant'])->name('tenants.store');
+        Route::put('/tenants/{id}', [AdminContextHubController::class, 'updateTenant'])->name('tenants.update');
+        Route::delete('/tenants/{id}', [AdminContextHubController::class, 'deleteTenant'])->name('tenants.delete');
+
+        // Store CRUD
+        Route::post('/stores', [AdminContextHubController::class, 'storeStore'])->name('stores.store');
+        Route::put('/stores/{id}', [AdminContextHubController::class, 'updateStore'])->name('stores.update');
+        Route::delete('/stores/{id}', [AdminContextHubController::class, 'deleteStore'])->name('stores.delete');
+
+        // Branch CRUD
+        Route::post('/branches', [AdminContextHubController::class, 'storeBranch'])->name('branches.store');
+        Route::put('/branches/{id}', [AdminContextHubController::class, 'updateBranch'])->name('branches.update');
+        Route::delete('/branches/{id}', [AdminContextHubController::class, 'deleteBranch'])->name('branches.delete');
+    });
+
 // Sneat Admin Currency Management Routes
 Route::prefix('admin/currencies')
     ->name('admin.currencies.')
@@ -41,3 +66,4 @@ Route::prefix('admin/settings/tenant')
         Route::get('/', [AdminTenantSettingController::class, 'index'])->name('admin.tenant.settings');
         Route::post('/', [AdminTenantSettingController::class, 'update'])->name('admin.tenant.settings.update');
     });
+

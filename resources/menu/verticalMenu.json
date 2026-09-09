@@ -220,16 +220,26 @@
       ]
     },
     {
-      "name": "Currencies & FX",
-      "icon": "menu-icon icon-base bx bx-money",
-      "slug": "admin-currencies",
-      "url": "admin/currencies"
-    },
-    {
-      "name": "Tenant Settings",
-      "icon": "menu-icon icon-base bx bx-slider",
-      "slug": "admin-tenant-settings",
-      "url": "admin/settings/tenant"
+      "name": "Multi-Tenancy & Stores",
+      "icon": "menu-icon icon-base bx bx-buildings",
+      "slug": "admin-context",
+      "submenu": [
+        {
+          "url": "admin/context",
+          "name": "Management Hub",
+          "slug": "admin-context-index"
+        },
+        {
+          "url": "admin/currencies",
+          "name": "Currencies & FX",
+          "slug": "admin-currencies"
+        },
+        {
+          "url": "admin/settings/tenant",
+          "name": "Tenant Settings",
+          "slug": "admin-tenant-settings"
+        }
+      ]
     },
     {
       "name": "Accounting",
